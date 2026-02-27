@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orlog — Norse Dice of the Gods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   ROOT VARIABLES & RESET
+═══════════════════════════════════════════════════ */
+:root {
+  --bg:       #07050a;
+  --bg2:      #0d0a12;
+  --surface:  #13101a;
+  --card:     #1a1626;
+  --card2:    #201c30;
+  --border:   #3a2f50;
+  --border2:  #5a4a6a;
+  --gold:     #c8993a;
+  --goldb:    #e8c060;
+  --goldc:    #f0d890;
+  --red:      #c84030;
+  --redb:     #ff6050;
+  --green:    #3a8f50;
+  --greenb:   #60bf70;
+  --blue:     #4070b8;
+  --blueb:    #70a0e0;
+  --stone:    #9a8870;
+  --text:     #d8ccb0;
+  --textdim:  #7a6a50;
+  --shadow:   rgba(0,0,0,0.8);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: 17px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════
+   BACKGROUNDS & TEXTURE
+═══════════════════════════════════════════════════ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(100,60,180,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(180,120,30,0.05) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* ═══════════════════════════════════════════════════
+   LAYOUT & SCREENS
+═══════════════════════════════════════════════════ */
+#app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px 60px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ═══════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════ */
+.site-header {
+  text-align: center;
+  padding: 32px 0 20px;
+}
+
+.site-title {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-shadow: 0 0 40px rgba(200,153,58,0.5), 0 2px 4px var(--shadow);
+  margin-bottom: 4px;
+}
+
+.site-subtitle {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  color: var(--textdim);
+  letter-spacing: 0.3em;
+  font-style: italic;
+}
+
+.rune-divider {
+  text-align: center;
+  color: var(--border2);
+  font-size: 1.2rem;
+  letter-spacing: 0.5em;
+  margin: 12px 0;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   CARDS & PANELS
+═══════════════════════════════════════════════════ */
+.card {
+  background: linear-gradient(160deg, var(--card) 0%, var(--surface) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.card-sm { padding: 16px; }
+.card-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--goldb);
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #2e2214 0%, #1a1208 100%);
+  border: 1px solid var(--gold);
+  color: var(--goldb);
+  padding: 10px 22px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #3e3020 0%, #2a1e10 100%);
+  border-color: var(--goldb);
+  box-shadow: 0 0 16px rgba(200,153,58,0.3), 0 2px 8px var(--shadow);
+  transform: translateY(-1px);
+}
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-primary {
+  background: linear-gradient(180deg, #6a4010 0%, #3a2008 100%);
+  border-color: var(--goldb);
+  font-size: 0.95rem;
+  padding: 12px 28px;
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #8a5818 0%, #5a3010 100%);
+}
+
+.btn-red {
+  border-color: var(--red);
+  color: var(--redb);
+}
+.btn-red:hover:not(:disabled) {
+  border-color: var(--redb);
+  box-shadow: 0 0 16px rgba(200,64,48,0.3);
+}
+
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════
+   INPUTS
+═══════════════════════════════════════════════════ */
+.input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 16px;
+  font-family: 'IM Fell English', serif;
+  font-size: 1rem;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: var(--gold); }
+.input-code {
+  font-family: 'Cinzel', serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  width: 160px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   LOBBY SCREEN
+═══════════════════════════════════════════════════ */
+#screen-lobby .lobby-center {
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.room-code-display {
+  font-family: 'Cinzel', serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.5em;
+  color: var(--goldb);
+  text-shadow: 0 0 30px rgba(232,192,96,0.5);
+  text-align: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.waiting-msg {
+  text-align: center;
+  color: var(--textdim);
+  font-style: italic;
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════
+   FAVOR SELECT SCREEN
+═══════════════════════════════════════════════════ */
+.favor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.favor-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.favor-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(200,153,58,0.05), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.favor-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.favor-card:hover::before { opacity: 1; }
+
+.favor-card.selected {
+  border-color: var(--goldb);
+  background: #1e1a2e;
+  box-shadow: 0 0 20px rgba(200,153,58,0.25), 0 4px 16px rgba(0,0,0,0.4);
+}
+.favor-card.selected::before { opacity: 1; }
+
+.favor-card-icon { font-size: 1.8rem; margin-bottom: 6px; }
+.favor-card-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--goldb);
+  margin-bottom: 4px;
+}
+.favor-card-desc {
+  font-size: 0.85rem;
+  color: var(--textdim);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+.favor-card-levels { font-size: 0.8rem; color: var(--textdim); }
+.favor-card-level {
+  padding: 2px 0;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.favor-card-level span.cost { color: var(--blueb); }
+.favor-card-level span.eff { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════
+   GAME SCREEN — PLAYER PANELS
+═══════════════════════════════════════════════════ */
+.battle-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.player-panel {
+  background: linear-gradient(160deg, var(--card) 0%, var(--surface) 100%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.3s;
+}
+
+.player-panel.is-me { border-left: 3px solid var(--goldb); }
+.player-panel.is-them { border-right: 3px solid var(--border2); }
+
+.player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--goldb);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-favor {
+  font-size: 0.78rem;
+  color: var(--textdim);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.stones-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.stone-gem {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--goldb), #805a10);
+  box-shadow: 0 0 5px rgba(200,153,58,0.4), inset 0 -1px 2px rgba(0,0,0,0.4);
+  transition: all 0.3s;
+}
+
+.stone-gem.empty {
+  background: var(--surface);
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+
+.stones-info {
+  font-size: 0.88rem;
+  color: var(--textdim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.token-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(64,112,184,0.15);
+  border: 1px solid rgba(64,112,184,0.3);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  color: var(--blueb);
+}
+
+.vs-badge {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  color: var(--border2);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+}
+
+.round-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+/* ═══════════════════════════════════════════════════
+   PHASE STATUS BAR
+═══════════════════════════════════════════════════ */
+.phase-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: center;
+  font-style: italic;
+  color: var(--textdim);
+  font-size: 1rem;
+  margin-bottom: 16px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.phase-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   DICE
+═══════════════════════════════════════════════════ */
+.dice-section { margin-bottom: 16px; }
+
+.dice-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--textdim);
+  margin-bottom: 10px;
+}
+
+.dice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.die {
+  width: 76px;
+  height: 76px;
+  background: linear-gradient(145deg, var(--card2), var(--surface));
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.die-face { font-size: 1.9rem; line-height: 1; }
+.die-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  color: var(--textdim);
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+.die-token {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blueb);
+  box-shadow: 0 0 6px rgba(112,160,224,0.6);
+}
+
+.die.kept {
+  border-color: var(--goldb);
+  background: linear-gradient(145deg, #2a2040, #1a1628);
+  box-shadow: 0 0 12px rgba(200,153,58,0.3), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.die.kept::after {
+  content: '✓';
+  position: absolute;
+  bottom: 3px;
+  right: 6px;
+  font-size: 0.6rem;
+  color: var(--goldb);
+  font-family: sans-serif;
+}
+
+.die.interactive:hover:not(.locked-die) {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+.die.locked-die { cursor: default; }
+
+.die.rolling {
+  animation: diceRoll 0.5s ease-out;
+}
+
+@keyframes diceRoll {
+  0% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-15deg) scale(0.9); }
+  50% { transform: rotate(10deg) scale(1.05); }
+  80% { transform: rotate(-5deg) scale(0.97); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+.die-opponent { opacity: 0.85; cursor: default; }
+
+/* ═══════════════════════════════════════════════════
+   ROLLING PHASE CONTROLS
+═══════════════════════════════════════════════════ */
+.reroll-info {
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--textdim);
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.reroll-pips {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.pip.used {
+  background: var(--border);
+}
+
+/* ═══════════════════════════════════════════════════
+   FAVOR ACTIVATION PANEL
+═══════════════════════════════════════════════════ */
+.favor-activate-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.favor-activate-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.favor-activate-icon { font-size: 1.5rem; }
+
+.favor-activate-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--goldb);
+}
+
+.favor-activate-tokens {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--blueb);
+}
+
+.favor-level-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.flvl-btn {
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text);
+  font-family: 'IM Fell English', serif;
+  gap: 3px;
+}
+
+.flvl-btn:hover:not(:disabled) {
+  border-color: var(--border2);
+  background: var(--card2);
+}
+
+.flvl-btn.selected {
+  border-color: var(--goldb);
+  background: #1e1a30;
+  box-shadow: 0 0 12px rgba(200,153,58,0.2);
+}
+
+.flvl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.flvl-btn .flvl-num {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  color: var(--textdim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.flvl-btn .flvl-cost { font-size: 0.9rem; color: var(--blueb); }
+.flvl-btn .flvl-effect { font-size: 0.88rem; color: var(--text); text-align: center; }
+
+.skip-btn {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--textdim);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  transition: all 0.2s;
+}
+
+.skip-btn:hover { border-color: var(--border2); color: var(--text); }
+.skip-btn.selected { border-color: var(--border2); color: var(--text); background: var(--card); }
+
+/* ═══════════════════════════════════════════════════
+   RESOLUTION
+═══════════════════════════════════════════════════ */
+.resolution-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.res-player {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.res-player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  color: var(--goldb);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+
+.res-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.92rem;
+}
+
+.res-stat:last-child { border-bottom: none; }
+
+.res-stat-label { color: var(--textdim); }
+.res-stat-val { font-family: 'Cinzel', serif; }
+.res-stat-val.dmg { color: var(--redb); }
+.res-stat-val.heal { color: var(--greenb); }
+.res-stat-val.tok { color: var(--blueb); }
+
+.res-vs {
+  text-align: center;
+  padding-top: 30px;
+  font-family: 'Cinzel', serif;
+  color: var(--border2);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+}
+
+.vs-total-dmg {
+  font-size: 2rem;
+  color: var(--redb);
+  display: block;
+  text-shadow: 0 0 20px rgba(200,64,48,0.4);
+  line-height: 1.2;
+}
+
+/* ═══════════════════════════════════════════════════
+   GAME LOG
+═══════════════════════════════════════════════════ */
+.log-container {
+  max-height: 130px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.log-entry {
+  padding: 4px 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--textdim);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.log-entry.highlight { color: var(--stone); }
+
+.key-row {
+  font-size: 0.88rem;
+  color: var(--textdim);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  line-height: 1.5;
+}
+.key-row strong { color: var(--text); font-style: normal; }
+
+/* ═══════════════════════════════════════════════════
+   GAME OVER OVERLAY
+═══════════════════════════════════════════════════ */
+.gameover-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,3,10,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.gameover-box {
+  background: linear-gradient(160deg, #1a1626, #0d0a18);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 48px 56px;
+  text-align: center;
+  max-width: 460px;
+  box-shadow: 0 0 80px rgba(200,153,58,0.2), 0 24px 80px rgba(0,0,0,0.8);
+}
+
+.gameover-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  text-shadow: 0 0 40px currentColor;
+}
+
+.gameover-title.win { color: var(--goldb); }
+.gameover-title.lose { color: var(--red); }
+.gameover-title.draw { color: var(--stone); }
+
+.gameover-desc {
+  color: var(--textdim);
+  font-style: italic;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════ */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-gold { color: var(--goldb); }
+.text-dim { color: var(--textdim); }
+.text-red { color: var(--redb); }
+.text-green { color: var(--greenb); }
+.mt8 { margin-top: 8px; }
+.mt12 { margin-top: 12px; }
+.mt16 { margin-top: 16px; }
+.mt24 { margin-top: 24px; }
+.mb8 { margin-bottom: 8px; }
+.mb12 { margin-bottom: 12px; }
+.flex { display: flex; }
+.gap8 { gap: 8px; }
+.gap12 { gap: 12px; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.flex-col { flex-direction: column; }
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--textdim);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.info-box {
+  background: rgba(64,112,184,0.08);
+  border: 1px solid rgba(64,112,184,0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: var(--textdim);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SITE HEADER -->
+  <div class="site-header">
+    <div class="site-title">⚔ ORLOG ⚔</div>
+    <div class="site-subtitle">Dice of the Norse Gods</div>
+    <div class="rune-divider">ᚢ ᚱ ᛚ ᚩ ᚷ</div>
+  </div>
+
+  <!-- ══════════════════════ LOBBY ══════════════════════ -->
+  <div id="screen-lobby" class="screen active">
+    <div class="lobby-center">
+      <div class="card">
+        <div class="card-title text-center">Enter the Arena</div>
+        <div style="text-align:center; margin-bottom:24px;">
+          <label class="label">Your Name</label>
+          <input type="text" id="player-name" class="input" placeholder="Norse warrior..." maxlength="18" style="display:block;margin:0 auto 16px;width:220px;">
+          <button class="btn btn-primary" onclick="createRoom()">⚔ Create New Game</button>
+        </div>
+        <hr class="divider">
+        <div class="text-center">
+          <div class="label" style="margin-bottom:10px;">Join with Room Code</div>
+          <div class="flex gap8 justify-center items-center">
+            <input type="text" id="join-code" class="input input-code" placeholder="ABCDEF" maxlength="6">
+            <button class="btn" onclick="joinRoom()">Join →</button>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="text-center">
+          <div class="label" style="margin-bottom:10px;">Single Player</div>
+          <button class="btn btn-primary" onclick="startBotGame()" style="border-color:var(--blueb);color:var(--blueb);">🤖 Play vs Bot</button>
+          <div style="margin-top:10px;">
+            <label class="label" style="display:inline;">Bot Difficulty:</label>
+            <select id="bot-difficulty" class="input" style="width:auto;padding:6px 12px;margin-left:6px;">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="info-box text-center">
+        Create a game and share the room code with your opponent to battle across any distance.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ WAITING ══════════════════════ -->
+  <div id="screen-waiting" class="screen">
+    <div class="lobby-center">
+      <div class="card text-center">
+        <div class="card-title">Awaiting Your Opponent</div>
+        <p class="text-dim" style="margin-bottom:16px; font-style:italic;">Share this sacred rune-code:</p>
+        <div class="room-code-display" id="display-code">──────</div>
+        <p class="waiting-msg mt12">The ravens watch and wait...</p>
+        <p class="text-dim mt8" style="font-size:0.8rem;">Your opponent enters this code at the main screen to join</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ FAVOR SELECT ══════════════════════ -->
+  <div id="screen-favor" class="screen">
+    <div class="card">
+      <div class="card-title">Choose Your Divine Patron</div>
+      <p class="text-dim mb12" style="font-style:italic;">Select a deity whose power will aid you in battle. God Favors are activated by spending ⬡ tokens earned from your ✋ dice.</p>
+      <div class="favor-grid" id="favor-grid"></div>
+      <div class="text-center mt16">
+        <button class="btn btn-primary" id="confirm-favor-btn" onclick="confirmFavor()" disabled>Invoke the Gods</button>
+      </div>
+      <p id="favor-wait-msg" class="waiting-msg mt12 hidden">Your patron is chosen. Waiting for your opponent...</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ GAME ══════════════════════ -->
+  <div id="screen-game" class="screen">
+
+    <!-- Battle header -->
+    <div class="battle-header">
+      <div class="player-panel is-me" id="panel-me">
+        <div class="player-name" id="me-name">You</div>
+        <div class="player-favor" id="me-favor">–</div>
+        <div class="stones-bar" id="me-stones"></div>
+        <div class="stones-info">
+          <span id="me-stones-text">15/15</span>
+          <span class="token-badge">⬡ <span id="me-tokens">0</span></span>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <div class="vs-badge">ROUND</div>
+        <div class="round-badge" id="round-num">1</div>
+        <div class="vs-badge mt8">VS</div>
+      </div>
+
+      <div class="player-panel is-them" id="panel-them" style="text-align:right;">
+        <div class="player-name" id="them-name">Opponent</div>
+        <div class="player-favor" id="them-favor">–</div>
+        <div class="stones-bar" id="them-stones" style="justify-content:flex-end;"></div>
+        <div class="stones-info" style="justify-content:flex-end;">
+          <span id="them-stones-text">15/15</span>
+          <span class="token-badge">⬡ <span id="them-tokens">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase status bar -->
+    <div class="phase-bar" id="phase-bar">
+      <div class="phase-dot"></div>
+      <span id="phase-text">Preparing...</span>
+    </div>
+
+    <!-- ROLLING PHASE -->
+    <div id="div-rolling" class="card hidden">
+      <div class="flex items-center gap8 mb8">
+        <div class="card-title mb8" style="margin-bottom:0;">Your Dice</div>
+        <div style="margin-left:auto;" class="reroll-info" id="reroll-info">
+          Rerolls: <span class="reroll-pips" id="pip-display"></span>
+        </div>
+      </div>
+      <p class="text-dim mb12" style="font-size:0.82rem; font-style:italic;">Click dice to keep them, then reroll the rest (up to 2 times). Lock when satisfied.</p>
+      <div class="dice-row" id="my-dice-row"></div>
+      <div class="btn-group mt16">
+        <button class="btn" id="btn-reroll" onclick="doReroll()">🎲 Reroll Unkept</button>
+        <button class="btn btn-primary" id="btn-lock" onclick="lockDice()">🔒 Lock Dice</button>
+      </div>
+    </div>
+
+    <!-- Opponent dice (visible after both lock) -->
+    <div id="div-opp-dice" class="card hidden">
+      <div class="card-title">Opponent's Dice</div>
+      <div class="dice-row" id="opp-dice-row"></div>
+    </div>
+
+    <!-- My dice static (shown during favor phase) -->
+    <div id="div-my-dice-static" class="card hidden">
+      <div class="card-title">Your Locked Dice</div>
+      <div class="dice-row" id="my-dice-static-row"></div>
+    </div>
+
+    <!-- FAVOR PHASE -->
+    <div id="div-favor" class="card hidden">
+      <div class="card-title">God Favor</div>
+      <div id="favor-activate-content"></div>
+      <div class="btn-group mt16">
+        <button class="btn btn-primary" id="btn-submit-favor" onclick="submitFavor()">Confirm Choice</button>
+      </div>
+      <p id="favor-submitted-msg" class="waiting-msg mt12 hidden">Your will is spoken. Awaiting your opponent...</p>
+    </div>
+
+    <!-- RESOLUTION -->
+    <div id="div-resolution" class="card hidden">
+      <div class="card-title text-center">Round Resolved</div>
+      <div id="resolution-content"></div>
+      <div class="btn-group mt16">
+        <button class="btn btn-primary" id="btn-next-round" onclick="nextRound()">Next Round →</button>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card card-sm">
+      <div class="card-title mb8" style="margin-bottom:8px;">Battle Chronicle</div>
+      <div class="log-container" id="game-log"></div>
+    </div>
+
+    <!-- SYMBOL KEY -->
+    <div class="card card-sm" id="symbol-key-card">
+      <div class="card-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:0;" onclick="toggleKey()">
+        <span>📖 Symbol Key</span>
+        <span id="key-toggle-icon" style="font-size:0.85rem;color:var(--textdim);">▼ show</span>
+      </div>
+      <div id="symbol-key-content" class="hidden" style="margin-top:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--goldb);letter-spacing:0.1em;margin-bottom:8px;">DICE FACES</div>
+            <div class="key-row">⚔️ <strong>Axe</strong> — Melee attack. Cancelled by opponent's 🪖 Helms.</div>
+            <div class="key-row">🪖 <strong>Helm</strong> — Melee block. Cancels one enemy ⚔️ Axe.</div>
+            <div class="key-row">🏹 <strong>Arrow</strong> — Ranged attack. Cancelled by opponent's 🛡️ Shields.</div>
+            <div class="key-row">🛡️ <strong>Shield</strong> — Ranged block. Cancels one enemy 🏹 Arrow.</div>
+            <div class="key-row">⬡ <strong>Blue dot</strong> — This die also earns a Token when rolled.</div>
+          </div>
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--goldb);letter-spacing:0.1em;margin-bottom:8px;">COMBAT RULES</div>
+            <div class="key-row">🟡 <strong>Health Stones</strong> — Lose one per point of damage taken. Reach 0 and you lose.</div>
+            <div class="key-row">⬡ <strong>Tokens</strong> — Earned from dice with blue dots. Spent to activate your God Favor.</div>
+            <div class="key-row">⚡ <strong>Piercing damage</strong> — Ignores all blocks. Goes straight to health.</div>
+            <div class="key-row">🔒 <strong>Lock Dice</strong> — Finalises your roll. Both players lock before favors are revealed.</div>
+            <div class="key-row">⏭ <strong>Skip</strong> — Forfeit your God Favor for this round. Tokens are kept for later.</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+          <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--goldb);letter-spacing:0.1em;margin-bottom:8px;">HOW A ROUND WORKS</div>
+          <div class="key-row" style="color:var(--text);">
+            1. <strong>Roll</strong> — Each player rolls 6 dice, keeps chosen ones, rerolls the rest (max 2 rerolls). Click a die to toggle keep/reroll.
+          </div>
+          <div class="key-row" style="color:var(--text);">
+            2. <strong>Lock</strong> — Hit "Lock Dice" when happy. Both players lock independently.
+          </div>
+          <div class="key-row" style="color:var(--text);">
+            3. <strong>God Favor</strong> — Both players secretly choose a favor level to activate (or skip). Choices reveal simultaneously.
+          </div>
+          <div class="key-row" style="color:var(--text);">
+            4. <strong>Resolve</strong> — Damage is calculated: Axes vs Helms, Arrows vs Shields. Unblocked hits deal 1 damage each. Favour effects then apply.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- GAME OVER OVERLAY (injected dynamically) -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GAME DATA
+═══════════════════════════════════════════════════════════════ */
+
+const FACES = [
+  { icon: '⚔️',  label: 'Axe',    type: 'matk', hasToken: false },
+  { icon: '🪖',  label: 'Helm',   type: 'mblk', hasToken: false },
+  { icon: '🏹',  label: 'Arrow',  type: 'ratk', hasToken: false },
+  { icon: '🛡️',  label: 'Shield', type: 'rblk', hasToken: false },
+  { icon: '⚔️',  label: 'Axe +⬡', type: 'matk', hasToken: true  },
+  { icon: '🪖',  label: 'Helm +⬡',type: 'mblk', hasToken: true  },
+];
+
+const FAVORS = {
+  thor:     { name:'Thor',     icon:'⚡', desc:'God of Thunder — rain lightning upon your foe',
+    levels:[{cost:3,text:'Deal 2 damage',  fx:{t:'dmg',v:2}},
+            {cost:6,text:'Deal 4 damage',  fx:{t:'dmg',v:4}},
+            {cost:9,text:'Deal 6 damage',  fx:{t:'dmg',v:6}}]},
+  freya:    { name:'Freya',    icon:'🌸', desc:'Goddess of Love — restore your health stones',
+    levels:[{cost:3,text:'Heal 2 stones',  fx:{t:'heal',v:2}},
+            {cost:6,text:'Heal 4 stones',  fx:{t:'heal',v:4}},
+            {cost:9,text:'Heal 6 stones',  fx:{t:'heal',v:6}}]},
+  odin:     { name:'Odin',     icon:'🦅', desc:'All-Father — divine wrath ignores all defense',
+    levels:[{cost:3,text:'2 piercing dmg', fx:{t:'pierce',v:2}},
+            {cost:6,text:'4 piercing dmg', fx:{t:'pierce',v:4}},
+            {cost:9,text:'6 piercing dmg', fx:{t:'pierce',v:6}}]},
+  loki:     { name:'Loki',     icon:'🐍', desc:'God of Mischief — steal your opponent\'s tokens',
+    levels:[{cost:3,text:'Steal 3 tokens', fx:{t:'steal_tok',v:3}},
+            {cost:6,text:'Steal 5 tokens', fx:{t:'steal_tok',v:5}},
+            {cost:9,text:'Steal all tokens',fx:{t:'steal_tok',v:999}}]},
+  tyr:      { name:'Tyr',      icon:'🗡️', desc:'God of War — bolster your melee attack',
+    levels:[{cost:3,text:'+2 melee attacks',fx:{t:'bonus_matk',v:2}},
+            {cost:6,text:'+3 melee attacks',fx:{t:'bonus_matk',v:3}},
+            {cost:9,text:'+5 melee attacks',fx:{t:'bonus_matk',v:5}}]},
+  skadi:    { name:'Skadi',    icon:'🎯', desc:'Goddess of Hunt — sharpen your ranged assault',
+    levels:[{cost:3,text:'+2 ranged attacks',fx:{t:'bonus_ratk',v:2}},
+            {cost:6,text:'+3 ranged attacks',fx:{t:'bonus_ratk',v:3}},
+            {cost:9,text:'+5 ranged attacks',fx:{t:'bonus_ratk',v:5}}]},
+  heimdall: { name:'Heimdall', icon:'🌈', desc:'Guardian of Asgard — raise impenetrable shields',
+    levels:[{cost:3,text:'+2 melee blocks',  fx:{t:'bonus_mblk',v:2}},
+            {cost:6,text:'+2 each block type',fx:{t:'bonus_all_blk',v:2}},
+            {cost:9,text:'+4 each block type',fx:{t:'bonus_all_blk',v:4}}]},
+  hel:      { name:'Hel',      icon:'💀', desc:'Goddess of Death — permanently curse their vitality',
+    levels:[{cost:6,text:'−2 max health',   fx:{t:'reduce_max',v:2}},
+            {cost:9,text:'−4 max health',   fx:{t:'reduce_max',v:4}}]},
+  idunn:    { name:'Idunn',    icon:'🍎', desc:'Goddess of Youth — apples of immortal healing',
+    levels:[{cost:6,text:'Heal 5 stones',   fx:{t:'heal',v:5}},
+            {cost:9,text:'Heal 8 stones',   fx:{t:'heal',v:8}}]},
+  mimir:    { name:'Mimir',    icon:'📜', desc:'God of Wisdom — gain bountiful tokens',
+    levels:[{cost:3,text:'Gain 4 tokens',   fx:{t:'gain_tok',v:4}},
+            {cost:6,text:'Gain 7 tokens',   fx:{t:'gain_tok',v:7}},
+            {cost:9,text:'Gain 12 tokens',  fx:{t:'gain_tok',v:12}}]},
+  frigg:    { name:'Frigg',    icon:'🌿', desc:'Goddess of Foresight — heal and weaken your foe',
+    levels:[{cost:3,text:'Heal 2 + steal 2 tokens', fx:{t:'frigg',heal:2,steal:2}},
+            {cost:6,text:'Heal 3 + steal 4 tokens', fx:{t:'frigg',heal:3,steal:4}},
+            {cost:9,text:'Heal 5 + steal 6 tokens', fx:{t:'frigg',heal:5,steal:6}}]},
+  ullr:     { name:'Ullr',     icon:'🏹', desc:'God of the Hunt — arrows that pierce all shields',
+    levels:[{cost:3,text:'+1 piercing arrow',fx:{t:'pierce_ratk',v:1}},
+            {cost:6,text:'+2 piercing arrows',fx:{t:'pierce_ratk',v:2}},
+            {cost:9,text:'+4 piercing arrows',fx:{t:'pierce_ratk',v:4}}]},
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════ */
+let myRole   = null;  // 'p1' | 'p2'
+let roomCode = null;
+let lastState= null;
+let pollTimer= null;
+
+// Bot game state
+let isBotGame    = false;
+let botDifficulty= 'medium'; // 'easy' | 'medium' | 'hard'
+let botState     = null;  // local copy of game state for bot games
+
+// Local dice state (to avoid overwriting opponent on every keystroke)
+let localDice  = [];
+let localKept  = [false,false,false,false,false,false];
+let localRerolls = 0;
+let diceLockedLocally = false;
+let favorLockedLocally= false;
+let selectedFavor = null;       // for favor select screen
+let selectedActivation = 'skip';// for in-game favor phase
+let favorPanelBuilt = false;    // prevents favor panel from being rebuilt on every poll tick
+
+function me()  { return myRole; }
+function opp() { return myRole==='p1'?'p2':'p1'; }
+
+/* ═══════════════════════════════════════════════════════════════
+   STORAGE  (overridden to local object for bot games)
+═══════════════════════════════════════════════════════════════ */
+async function loadState() {
+  if(isBotGame) return botState ? JSON.parse(JSON.stringify(botState)) : null;
+  try {
+    const r = await window.storage.get('orlog:'+roomCode, true);
+    if (r) return JSON.parse(r.value);
+  } catch(e) {}
+  return null;
+}
+async function saveState(state) {
+  if(isBotGame) { botState = JSON.parse(JSON.stringify(state)); return; }
+  try { await window.storage.set('orlog:'+roomCode, JSON.stringify(state), true); }
+  catch(e) { console.warn('Save failed', e); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOT GAME ENTRY
+═══════════════════════════════════════════════════════════════ */
+async function startBotGame() {
+  const name = pname();
+  botDifficulty = document.getElementById('bot-difficulty').value;
+  isBotGame = true;
+  myRole = 'p1';
+  roomCode = 'BOT-'+Math.random();
+
+  const state = {
+    phase:'favor_select', round:1, winner:null, log:['You challenge the Bot Jarl!'],
+    lastResolution:null, favorResolved:false,
+    p1: makePlayer(name),
+    p2: makePlayer('Bot Jarl')
+  };
+  // Bot picks a random favor upfront
+  const favorKeys = Object.keys(FAVORS);
+  state.p2.godFavor  = botPickFavor(state, favorKeys);
+  state.p2.favorReady= true;
+  await saveState(state);
+
+  showScreen('favor');
+  buildFavorGrid();
+  startPolling();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOT ARTIFICIAL INTELLIGENCE
+═══════════════════════════════════════════════════════════════ */
+
+// --- Favor selection (called once at game start) ---
+function botPickFavor(state, keys) {
+  // Hard bot prefers offensive favors; medium/easy more random
+  const offensive = ['thor','odin','tyr','skadi','ullr','loki'];
+  const defensive = ['freya','heimdall','frigg','idunn','hel','mimir'];
+  if(botDifficulty==='easy') return keys[Math.floor(Math.random()*keys.length)];
+  if(botDifficulty==='medium') {
+    const pool = [...offensive, ...defensive];
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  // Hard: pick from offensive set
+  return offensive[Math.floor(Math.random()*offensive.length)];
+}
+
+// --- Die scoring (how desirable is a given face) ---
+function scoreDie(val, difficulty) {
+  const f = FACES[val];
+  const tokenBonus = f.hasToken ? (difficulty==='hard'?3:difficulty==='medium'?2:1) : 0;
+  // Base scores: attacks slightly preferred over blocks
+  const base = { matk:3, ratk:3, mblk:2, rblk:2 };
+  return (base[f.type]||0) + tokenBonus;
+}
+
+// --- Bot rolling phase ---
+function botDoRolling(state) {
+  const bot = state.p2;
+  // Simulate up to 2 rerolls
+  const maxRolls = botDifficulty==='easy' ? 1 : 2;
+  // Start: keep dice above a threshold
+  function keepThreshold(roll) {
+    if(botDifficulty==='easy')   return 2;  // keep only very good dice
+    if(botDifficulty==='medium') return 2;
+    return 3;  // hard: keep more
+  }
+
+  let dice = rollN(6);
+  let kept  = dice.map(v => scoreDie(v, botDifficulty) >= keepThreshold());
+
+  for(let r=0; r<maxRolls; r++) {
+    // Reroll unkept
+    dice = dice.map((v,i) => kept[i] ? v : Math.floor(Math.random()*6));
+    // Re-evaluate what to keep
+    const threshold = r===0 ? 2 : 1; // lower bar on final reroll
+    kept = dice.map(v => scoreDie(v, botDifficulty) >= threshold);
+  }
+
+  bot.dice    = dice;
+  bot.kept    = kept;
+  bot.rerolls = maxRolls;
+  bot.locked  = true;
+}
+
+// --- Bot favor activation ---
+function botPickActivation(state) {
+  const bot   = state.p2;
+  const player= state.p1;
+  const favor = FAVORS[bot.godFavor];
+  const tokens= bot.tokens;
+
+  if(botDifficulty==='easy') {
+    // Easy: only use level 1 if affordable, often skip
+    if(Math.random()<0.4 && tokens>=favor.levels[0].cost) return 0;
+    return 'skip';
+  }
+
+  // Find highest affordable level
+  let best = 'skip';
+  favor.levels.forEach((lv,i) => {
+    if(tokens >= lv.cost) best = i;
+  });
+
+  if(best==='skip') return 'skip';
+
+  if(botDifficulty==='medium') {
+    // Medium: use level but randomly downgrade sometimes
+    if(Math.random()<0.3 && best>0) best = best-1;
+    return best;
+  }
+
+  // Hard: strategic selection
+  const botLow    = bot.stones <= 4;
+  const playerLow = player.stones <= 4;
+  const favType   = favor.levels[0].fx.t;
+
+  // If very low health and have heal, use it
+  if(botLow && ['heal','frigg'].includes(favType) && tokens>=favor.levels[0].cost) return best;
+  // If player almost dead, go for kill
+  if(playerLow && ['dmg','pierce','pierce_ratk','bonus_matk','bonus_ratk'].includes(favType)) return best;
+  // Otherwise use level 1 if tokens not too precious
+  if(tokens >= favor.levels[0].cost*2) return best;
+  if(tokens >= favor.levels[0].cost) return 0;
+  return 'skip';
+}
+
+// --- Main bot turn orchestrator (called after player locks or submits favor) ---
+async function botTakeTurn(triggerPhase) {
+  // Small delay to feel natural
+  const delay = botDifficulty==='easy' ? 1800 : botDifficulty==='medium' ? 1200 : 700;
+  await new Promise(r=>setTimeout(r, delay));
+
+  const state = await loadState();
+  if(!state) return;
+
+  if(triggerPhase==='rolling' && !state.p2.locked) {
+    botDoRolling(state);
+    const bothLocked = state.p1.locked && state.p2.locked;
+    if(bothLocked) {
+      state.phase = 'favor_phase';
+      state.favorResolved = false;
+      rlog(state, `Bot Jarl has locked their dice!`);
+    }
+    await saveState(state);
+    updateGameDisplay(state);
+
+    // If both locked and player already set favor... unlikely but handle
+    if(state.phase==='favor_phase') {
+      await new Promise(r=>setTimeout(r, delay));
+      botSubmitFavor();
+    }
+    return;
+  }
+
+  if(triggerPhase==='favor' && state.p2.favorChoice===null) {
+    await botSubmitFavor();
+    return;
+  }
+}
+
+async function botSubmitFavor() {
+  const delay = botDifficulty==='easy' ? 1200 : botDifficulty==='medium' ? 800 : 500;
+  await new Promise(r=>setTimeout(r, delay));
+
+  const state = await loadState();
+  if(!state || state.phase!=='favor_phase') return;
+
+  state.p2.favorChoice = botPickActivation(state);
+  rlog(state, `Bot Jarl has chosen their favor.`);
+
+  const bothIn2 = state.p1.favorChoice!==null && state.p2.favorChoice!==null;
+  if(bothIn2 && !state.favorResolved) {
+    state.favorResolved = true;
+    resolveRound(state);
+    if(state.phase !== 'game_over') state.phase = 'resolution';
+  }
+  await saveState(state);
+  updateGameDisplay(state);
+  if(state.phase === 'game_over') { showGameOver(state); clearInterval(pollTimer); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+function genCode() {
+  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>ch[Math.floor(Math.random()*ch.length)]).join('');
+}
+function pname() {
+  const n=(document.getElementById('player-name').value||'').trim();
+  return n||'Viking';
+}
+function rollN(n) { return Array.from({length:n},()=>Math.floor(Math.random()*6)); }
+function rlog(state, msg) { state.log.unshift(msg); if(state.log.length>40) state.log.length=40; }
+
+function makePlayer(name) {
+  return { name, stones:15, maxStones:15, tokens:0, godFavor:null, favorReady:false,
+           dice:[], kept:[false,false,false,false,false,false], rerolls:0,
+           locked:false, favorChoice:null };
+}
+
+function rollForBoth(state) {
+  for(const role of ['p1','p2']) {
+    state[role].dice = rollN(6);
+    state[role].kept = [false,false,false,false,false,false];
+    state[role].rerolls = 0;
+    state[role].locked = false;
+    state[role].favorChoice = null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCREEN NAV
+═══════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOBBY
+═══════════════════════════════════════════════════════════════ */
+async function createRoom() {
+  const name = pname();
+  roomCode = genCode();
+  myRole = 'p1';
+  const state = {
+    phase: 'lobby', round: 1, winner: null, log: [`${name} opened the arena.`],
+    lastResolution: null, favorResolved: false,
+    p1: makePlayer(name),
+    p2: makePlayer(null)
+  };
+  await saveState(state);
+  document.getElementById('display-code').textContent = roomCode;
+  showScreen('waiting');
+  startPolling();
+}
+
+async function joinRoom() {
+  const code = (document.getElementById('join-code').value||'').trim().toUpperCase();
+  if(code.length<4){ alert('Enter a valid room code.'); return; }
+  const name = pname();
+  roomCode = code;
+  myRole = 'p2';
+  const state = await loadState();
+  if(!state){ alert('Room not found! Check the code and try again.'); return; }
+  if(state.phase!=='lobby'){ alert('That game has already started.'); return; }
+  state.p2 = makePlayer(name);
+  state.phase = 'favor_select';
+  rlog(state, `${name} joined the battle!`);
+  await saveState(state);
+  showScreen('favor');
+  buildFavorGrid();
+  startPolling();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   POLLING
+═══════════════════════════════════════════════════════════════ */
+function startPolling() {
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollUpdate, 2200);
+}
+
+async function pollUpdate() {
+  const state = await loadState();
+  if(!state) return;
+  lastState = state;
+  const curScreen = document.querySelector('.screen.active')?.id;
+
+  // Bot game: just update display from local state
+  if(isBotGame) {
+    if(state.phase==='game_over') { showGameOver(state); clearInterval(pollTimer); return; }
+    if(['rolling','favor_phase','resolution'].includes(state.phase)) {
+      if(curScreen!=='screen-game') showScreen('game');
+      updateGameDisplay(state);
+    }
+    return;
+  }
+
+  // Waiting → Favor select
+  if(state.phase==='favor_select' && curScreen==='screen-waiting') {
+    showScreen('favor');
+    buildFavorGrid();
+    return;
+  }
+
+  // Favor select → Game
+  if(state.phase==='rolling' && curScreen==='screen-favor') {
+    showScreen('game');
+    diceLockedLocally = false;
+    favorLockedLocally = false;
+    favorPanelBuilt = false;
+  }
+
+  // Fix missed phase transitions (fallback in case race condition)
+  if(state.phase==='rolling' && state.p1.locked && state.p2.locked) {
+    state.phase = 'favor_phase';
+    await saveState(state);
+  }
+
+  if(state.phase==='favor_phase' && state.p1.favorChoice!==null && state.p2.favorChoice!==null && !state.favorResolved) {
+    state.favorResolved = true;
+    resolveRound(state);
+    if(state.phase !== 'game_over') state.phase = 'resolution';
+    await saveState(state);
+  }
+
+  // Game over
+  if(state.phase==='game_over') {
+    showGameOver(state);
+    clearInterval(pollTimer);
+    return;
+  }
+
+  // Update game display if in game screen
+  if(['rolling','favor_phase','resolution'].includes(state.phase)) {
+    if(curScreen!=='screen-game') showScreen('game');
+    updateGameDisplay(state);
+  }
+
+  // If we just moved to a new round, reset local flags
+  if(state.phase==='rolling' && diceLockedLocally && !state[me()].locked) {
+    diceLockedLocally = false;
+    favorLockedLocally = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FAVOR SELECTION
+═══════════════════════════════════════════════════════════════ */
+function buildFavorGrid() {
+  const grid = document.getElementById('favor-grid');
+  grid.innerHTML = '';
+  for(const [key, f] of Object.entries(FAVORS)) {
+    const el = document.createElement('div');
+    el.className = 'favor-card';
+    el.id = 'fc-'+key;
+    el.onclick = () => pickFavor(key);
+    el.innerHTML = `
+      <div class="favor-card-icon">${f.icon}</div>
+      <div class="favor-card-name">${f.name}</div>
+      <div class="favor-card-desc">${f.desc}</div>
+      <div class="favor-card-levels">
+        ${f.levels.map((l,i)=>`<div class="favor-card-level"><span class="cost">Lv${i+1} (${l.cost}⬡)</span> — <span class="eff">${l.text}</span></div>`).join('')}
+      </div>`;
+    grid.appendChild(el);
+  }
+}
+
+function pickFavor(key) {
+  document.querySelectorAll('.favor-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('fc-'+key).classList.add('selected');
+  selectedFavor = key;
+  document.getElementById('confirm-favor-btn').disabled = false;
+}
+
+async function confirmFavor() {
+  if(!selectedFavor) return;
+  const state = await loadState();
+  state[me()].godFavor = selectedFavor;
+  state[me()].favorReady = true;
+  const o = state[opp()];
+  if(o.favorReady || isBotGame) {
+    // Both ready — start!
+    state.phase = 'rolling';
+    rollForBoth(state);
+    const botMsg = isBotGame ? ' The Bot Jarl sharpens their axe.' : '';
+    rlog(state, `Both warriors have chosen their patron. Round 1 begins!${botMsg}`);
+  }
+  document.getElementById('confirm-favor-btn').disabled = true;
+  document.getElementById('favor-wait-msg').classList.remove('hidden');
+  await saveState(state);
+
+  if(isBotGame) {
+    showScreen('game');
+    diceLockedLocally = false;
+    favorLockedLocally = false;
+    favorPanelBuilt = false;
+    localDice = [...state.p1.dice];
+    localKept = [...state.p1.kept];
+    localRerolls = 0;
+    updateGameDisplay(state);
+    // Bot rolls dice in background
+    botTakeTurn('rolling');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME DISPLAY
+═══════════════════════════════════════════════════════════════ */
+function updateGameDisplay(state) {
+  const myP = state[me()];
+  const thP = state[opp()];
+  const myF = myP.godFavor ? FAVORS[myP.godFavor] : null;
+  const thF = thP.godFavor ? FAVORS[thP.godFavor] : null;
+
+  document.getElementById('me-name').textContent   = myP.name || 'You';
+  document.getElementById('them-name').textContent = thP.name || 'Opponent';
+  document.getElementById('me-favor').textContent  = myF ? `${myF.icon} ${myF.name}` : '–';
+  document.getElementById('them-favor').textContent= thF ? `${thF.icon} ${thF.name}` : '–';
+  document.getElementById('round-num').textContent = state.round;
+  document.getElementById('me-tokens').textContent  = myP.tokens;
+  document.getElementById('them-tokens').textContent= thP.tokens;
+
+  renderStones('me-stones',   myP.stones, myP.maxStones);
+  renderStones('them-stones', thP.stones, thP.maxStones);
+  document.getElementById('me-stones-text').textContent   = `${myP.stones}/${myP.maxStones}`;
+  document.getElementById('them-stones-text').textContent = `${thP.stones}/${thP.maxStones}`;
+
+  renderLog(state.log);
+
+  if(state.phase==='rolling')     displayRollingPhase(state);
+  if(state.phase==='favor_phase') displayFavorPhase(state);
+  if(state.phase==='resolution')  displayResolution(state);
+}
+
+function renderStones(id, stones, max) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for(let i=0;i<max;i++) {
+    const g = document.createElement('div');
+    g.className = 'stone-gem' + (i>=stones?' empty':'');
+    el.appendChild(g);
+  }
+}
+
+function renderLog(log) {
+  const el = document.getElementById('game-log');
+  el.innerHTML = (log||[]).map(e=>`<div class="log-entry">${e}</div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROLLING PHASE
+═══════════════════════════════════════════════════════════════ */
+function displayRollingPhase(state) {
+  hide('div-opp-dice');
+  hide('div-my-dice-static');
+  hide('div-favor');
+  hide('div-resolution');
+  show('div-rolling');
+
+  const myP = state[me()];
+  const thP = state[opp()];
+
+  if(!diceLockedLocally) {
+    // Sync local dice from state only if not already rolling locally
+    if(localDice.length===0) {
+      localDice   = [...myP.dice];
+      localKept   = [...myP.kept];
+      localRerolls = myP.rerolls;
+    }
+    renderMyDice(false);
+    updateRerollPips();
+    document.getElementById('btn-reroll').disabled = localRerolls>=2;
+    document.getElementById('btn-lock').disabled = false;
+
+    const oppStatus = thP.locked ? '✓ Opponent locked in!' : '⏳ Opponent is rolling...';
+    setPhaseBar(thP.locked
+      ? `${thP.name} has locked their dice. Lock yours to proceed!`
+      : `Roll and keep your dice. ${thP.name} is choosing theirs.`);
+  } else {
+    // I'm locked, show my locked dice statically
+    hide('div-rolling');
+    show('div-my-dice-static');
+    renderDiceRow('my-dice-static-row', myP.dice, myP.kept, false, true);
+    setPhaseBar(thP.locked
+      ? 'Both warriors have locked! Moving to the God Favor phase...'
+      : `Awaiting ${thP.name} to lock their dice...`);
+  }
+}
+
+function renderMyDice(animate) {
+  const row = document.getElementById('my-dice-row');
+  row.innerHTML = '';
+  localDice.forEach((val,i) => {
+    const face = FACES[val];
+    const d = document.createElement('div');
+    d.className = 'die interactive' + (localKept[i]?' kept':'') + (animate?' rolling':'');
+    d.onclick = () => { localKept[i]=!localKept[i]; renderMyDice(false); };
+    d.innerHTML = `<span class="die-face">${face.icon}</span><span class="die-label">${face.label}</span>`;
+    if(face.hasToken) {
+      const tok = document.createElement('div');
+      tok.className = 'die-token';
+      d.appendChild(tok);
+    }
+    row.appendChild(d);
+  });
+}
+
+function renderDiceRow(containerId, dice, kept, interactive, locked) {
+  const row = document.getElementById(containerId);
+  row.innerHTML = '';
+  dice.forEach((val,i) => {
+    const face = FACES[val];
+    const d = document.createElement('div');
+    d.className = 'die die-opponent' + (locked?' locked-die':'') + (kept&&kept[i]?' kept':'');
+    d.innerHTML = `<span class="die-face">${face.icon}</span><span class="die-label">${face.label}</span>`;
+    if(face.hasToken) {
+      const tok = document.createElement('div');
+      tok.className = 'die-token';
+      d.appendChild(tok);
+    }
+    row.appendChild(d);
+  });
+}
+
+function updateRerollPips() {
+  const el = document.getElementById('pip-display');
+  el.innerHTML = '';
+  for(let i=0;i<2;i++) {
+    const p = document.createElement('div');
+    p.className = 'pip' + (i<localRerolls?' used':'');
+    el.appendChild(p);
+  }
+  document.getElementById('reroll-info').innerHTML =
+    `Rerolls: <span class="reroll-pips" id="pip-display">${el.innerHTML}</span>`;
+  // Re-insert pips after innerHTML
+  const newPips = document.getElementById('pip-display');
+  if(newPips) {
+    newPips.innerHTML='';
+    for(let i=0;i<2;i++) {
+      const p=document.createElement('div');
+      p.className='pip'+(i<localRerolls?' used':'');
+      newPips.appendChild(p);
+    }
+  }
+}
+
+async function doReroll() {
+  if(localRerolls>=2 || diceLockedLocally) return;
+  localRerolls++;
+  localDice = localDice.map((v,i) => localKept[i] ? v : Math.floor(Math.random()*6));
+  renderMyDice(true);
+  updateRerollPips();
+  document.getElementById('btn-reroll').disabled = localRerolls>=2;
+
+  // Persist to shared state
+  const state = await loadState();
+  if(state) {
+    state[me()].dice    = [...localDice];
+    state[me()].kept    = [...localKept];
+    state[me()].rerolls = localRerolls;
+    await saveState(state);
+  }
+}
+
+async function lockDice() {
+  if(diceLockedLocally) return;
+  diceLockedLocally = true;
+  document.getElementById('btn-reroll').disabled = true;
+  document.getElementById('btn-lock').disabled   = true;
+
+  const state = await loadState();
+  if(!state) return;
+  state[me()].dice   = [...localDice];
+  state[me()].kept   = [...localKept];
+  state[me()].locked = true;
+
+  if(state[opp()].locked) {
+    state.phase = 'favor_phase';
+    state.favorResolved = false;
+    rlog(state, `Both warriors locked their dice! Time to invoke the gods.`);
+  }
+  await saveState(state);
+
+  // Bot game: trigger bot rolling phase
+  if(isBotGame && !state.p2.locked) {
+    botTakeTurn('rolling');
+  }
+
+  // Update display immediately
+  hide('div-rolling');
+  show('div-my-dice-static');
+  renderDiceRow('my-dice-static-row', localDice, localKept, false, true);
+  setPhaseBar(state[opp()].locked
+    ? 'Both locked! Time to invoke the gods...'
+    : `Dice locked. Awaiting ${state[opp()].name}...`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FAVOR PHASE
+═══════════════════════════════════════════════════════════════ */
+function displayFavorPhase(state) {
+  hide('div-rolling');
+  hide('div-resolution');
+  show('div-my-dice-static');
+  show('div-opp-dice');
+  show('div-favor');
+
+  const myP  = state[me()];
+  const thP  = state[opp()];
+
+  renderDiceRow('my-dice-static-row', myP.dice, myP.kept, false, true);
+  renderDiceRow('opp-dice-row', thP.dice, thP.kept, false, true);
+
+  if(!favorLockedLocally) {
+    if(!favorPanelBuilt) {
+      buildFavorActivation(myP);
+      favorPanelBuilt = true;
+    }
+    document.getElementById('btn-submit-favor').disabled = false;
+    document.getElementById('favor-submitted-msg').classList.add('hidden');
+    setPhaseBar('Choose your God Favor level (or skip). Both choices reveal simultaneously.');
+  } else {
+    document.getElementById('btn-submit-favor').disabled = true;
+    document.getElementById('favor-submitted-msg').classList.remove('hidden');
+    const oppDone = thP.favorChoice !== null;
+    setPhaseBar(oppDone
+      ? 'Both have chosen. Resolving the round...'
+      : `Your favor is spoken. Awaiting ${thP.name}...`);
+  }
+}
+
+function buildFavorActivation(myP) {
+  const f = FAVORS[myP.godFavor];
+  const content = document.getElementById('favor-activate-content');
+  const toks = myP.tokens;
+
+  let html = `<div class="favor-activate-panel">
+    <div class="favor-activate-header">
+      <span class="favor-activate-icon">${f.icon}</span>
+      <div>
+        <div class="favor-activate-name">${f.name}</div>
+        <div style="font-size:0.78rem;color:var(--textdim);font-style:italic;">${f.desc}</div>
+      </div>
+      <div class="favor-activate-tokens">⬡ ${toks} tokens available</div>
+    </div>
+    <div class="favor-level-buttons">
+      <button class="skip-btn selected" id="flvl-skip" onclick="selectActivation('skip')">⏭ Skip</button>`;
+
+  f.levels.forEach((lv,i) => {
+    const canAfford = toks >= lv.cost;
+    html += `<button class="flvl-btn" id="flvl-${i}" onclick="selectActivation(${i})" ${canAfford?'':'disabled'}>
+      <span class="flvl-num">Level ${i+1}</span>
+      <span class="flvl-cost">⬡ ${lv.cost} tokens</span>
+      <span class="flvl-effect">${lv.text}</span>
+    </button>`;
+  });
+
+  html += `</div></div>`;
+  content.innerHTML = html;
+  selectedActivation = 'skip';
+}
+
+function selectActivation(choice) {
+  document.querySelectorAll('.flvl-btn, .skip-btn').forEach(b=>b.classList.remove('selected'));
+  if(choice==='skip') document.getElementById('flvl-skip')?.classList.add('selected');
+  else document.getElementById('flvl-'+choice)?.classList.add('selected');
+  selectedActivation = choice;
+}
+
+async function submitFavor() {
+  if(favorLockedLocally) return;
+  favorLockedLocally = true;
+
+  const state = await loadState();
+  if(!state || state.phase!=='favor_phase') return;
+
+  state[me()].favorChoice = selectedActivation;
+
+  const bothIn = state[opp()].favorChoice !== null;
+  if(bothIn && !state.favorResolved) {
+    state.favorResolved = true;
+    resolveRound(state);
+    if(state.phase !== 'game_over') state.phase = 'resolution';
+  }
+  await saveState(state);
+
+  if(state.phase === 'game_over') { updateGameDisplay(state); showGameOver(state); return; }
+
+  // Bot game: trigger bot favor if not yet chosen
+  if(isBotGame && state.p2.favorChoice===null) {
+    botTakeTurn('favor');
+  }
+
+  document.getElementById('btn-submit-favor').disabled = true;
+  document.getElementById('favor-submitted-msg').classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESOLUTION ENGINE
+═══════════════════════════════════════════════════════════════ */
+function countDice(dice) {
+  let matk=0,mblk=0,ratk=0,rblk=0,toks=0;
+  dice.forEach(v => {
+    const f = FACES[v];
+    if(f.type==='matk') matk++;
+    if(f.type==='mblk') mblk++;
+    if(f.type==='ratk') ratk++;
+    if(f.type==='rblk') rblk++;
+    if(f.hasToken) toks++;
+  });
+  return {matk,mblk,ratk,rblk,toks};
+}
+
+function applyFavor(actor, other, choice, bonuses, log) {
+  if(choice===null||choice==='skip') return;
+  const f = FAVORS[actor.godFavor];
+  const lv = f.levels[choice];
+  const fx = lv.fx;
+  actor.tokens -= lv.cost;
+  if(actor.tokens<0) actor.tokens=0;
+
+  const n = actor.name;
+  switch(fx.t) {
+    case 'dmg':
+      other.stones = Math.max(0, other.stones-fx.v);
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: dealt ${fx.v} direct damage!`);
+      break;
+    case 'heal':
+      actor.stones = Math.min(actor.maxStones, actor.stones+fx.v);
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: healed ${fx.v} stones.`);
+      break;
+    case 'pierce':
+      bonuses[actor===bonuses._p1?'p1':'p2'].pierce_dmg = (bonuses[actor===bonuses._p1?'p1':'p2'].pierce_dmg||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} piercing damage this round!`);
+      break;
+    case 'steal_tok': {
+      const s=Math.min(other.tokens, fx.v);
+      other.tokens-=s; actor.tokens+=s;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: stole ${s} tokens from ${other.name}!`);
+      break;
+    }
+    case 'bonus_matk':
+      bonuses[actor===bonuses._p1?'p1':'p2'].matk = (bonuses[actor===bonuses._p1?'p1':'p2'].matk||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} melee attacks!`);
+      break;
+    case 'bonus_ratk':
+      bonuses[actor===bonuses._p1?'p1':'p2'].ratk = (bonuses[actor===bonuses._p1?'p1':'p2'].ratk||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} ranged attacks!`);
+      break;
+    case 'bonus_mblk':
+      bonuses[actor===bonuses._p1?'p1':'p2'].mblk = (bonuses[actor===bonuses._p1?'p1':'p2'].mblk||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} melee blocks!`);
+      break;
+    case 'bonus_all_blk':
+      bonuses[actor===bonuses._p1?'p1':'p2'].mblk = (bonuses[actor===bonuses._p1?'p1':'p2'].mblk||0) + fx.v;
+      bonuses[actor===bonuses._p1?'p1':'p2'].rblk = (bonuses[actor===bonuses._p1?'p1':'p2'].rblk||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} to all blocks!`);
+      break;
+    case 'reduce_max':
+      other.maxStones -= fx.v;
+      other.stones = Math.min(other.stones, other.maxStones);
+      if(other.maxStones<1) other.maxStones=1;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: cursed ${other.name}'s max health by −${fx.v}!`);
+      break;
+    case 'gain_tok':
+      actor.tokens += fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: gained ${fx.v} tokens!`);
+      break;
+    case 'frigg': {
+      actor.stones = Math.min(actor.maxStones, actor.stones+fx.heal);
+      const s2=Math.min(other.tokens,fx.steal);
+      other.tokens-=s2; actor.tokens+=s2;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: healed ${fx.heal}, stole ${s2} tokens!`);
+      break;
+    }
+    case 'pierce_ratk':
+      bonuses[actor===bonuses._p1?'p1':'p2'].pierce_dmg = (bonuses[actor===bonuses._p1?'p1':'p2'].pierce_dmg||0) + fx.v;
+      rlog({log}, `${n} invoked ${f.icon} ${f.name}: +${fx.v} piercing ranged damage!`);
+      break;
+  }
+}
+
+function resolveRound(state) {
+  const p1=state.p1, p2=state.p2;
+  const d1=countDice(p1.dice), d2=countDice(p2.dice);
+
+  // Earn tokens from hand dice first
+  p1.tokens += d1.toks;
+  p2.tokens += d2.toks;
+  if(d1.toks>0) rlog(state, `${p1.name} earned ${d1.toks} ⬡ token${d1.toks!==1?'s':''} from their dice.`);
+  if(d2.toks>0) rlog(state, `${p2.name} earned ${d2.toks} ⬡ token${d2.toks!==1?'s':''} from their dice.`);
+
+  // Bonuses from favors
+  const bon = {
+    _p1: p1, _p2: p2,
+    p1:{matk:0,mblk:0,ratk:0,rblk:0,pierce_dmg:0},
+    p2:{matk:0,mblk:0,ratk:0,rblk:0,pierce_dmg:0}
+  };
+
+  // Apply favor effects (both simultaneously — p1 first)
+  applyFavor(p1, p2, p1.favorChoice, bon, state.log);
+  applyFavor(p2, p1, p2.favorChoice, bon, state.log);
+
+  // Totals including bonuses
+  const p1m = d1.matk + bon.p1.matk;
+  const p1r = d1.ratk + bon.p1.ratk;
+  const p1mb= d1.mblk + bon.p1.mblk;
+  const p1rb= d1.rblk + bon.p1.rblk;
+  const p2m = d2.matk + bon.p2.matk;
+  const p2r = d2.ratk + bon.p2.ratk;
+  const p2mb= d2.mblk + bon.p2.mblk;
+  const p2rb= d2.rblk + bon.p2.rblk;
+
+  const dmg_p1_to_p2_m = Math.max(0, p1m - p2mb);
+  const dmg_p1_to_p2_r = Math.max(0, p1r - p2rb);
+  const dmg_p2_to_p1_m = Math.max(0, p2m - p1mb);
+  const dmg_p2_to_p1_r = Math.max(0, p2r - p1rb);
+  const pierce1 = bon.p1.pierce_dmg||0;
+  const pierce2 = bon.p2.pierce_dmg||0;
+
+  const total12 = dmg_p1_to_p2_m + dmg_p1_to_p2_r + pierce1;
+  const total21 = dmg_p2_to_p1_m + dmg_p2_to_p1_r + pierce2;
+
+  p2.stones = Math.max(0, p2.stones - total12);
+  p1.stones = Math.max(0, p1.stones - total21);
+
+  rlog(state, `⚔ ${p1.name} dealt ${total12} damage (⚔${dmg_p1_to_p2_m}+🏹${dmg_p1_to_p2_r}${pierce1?'+⚡'+pierce1:''}). ${p2.name} dealt ${total21} damage (⚔${dmg_p2_to_p1_m}+🏹${dmg_p2_to_p1_r}${pierce2?'+⚡'+pierce2:''}).`);
+
+  state.lastResolution = {
+    p1:{ matk:p1m, ratk:p1r, mblk:p1mb, rblk:p1rb, toks:d1.toks, pierce:pierce1, dealt:total12, taken:total21 },
+    p2:{ matk:p2m, ratk:p2r, mblk:p2mb, rblk:p2rb, toks:d2.toks, pierce:pierce2, dealt:total21, taken:total12 }
+  };
+
+  if(p1.stones<=0 || p2.stones<=0) {
+    state.winner = (p1.stones<=0 && p2.stones<=0) ? 'draw' : (p1.stones<=0 ? 'p2' : 'p1');
+    state.phase = 'game_over';
+    const w = state.winner==='draw' ? 'The battle ends in a draw!'
+             : `${state[state.winner].name} stands victorious!`;
+    rlog(state, `🏆 ${w}`);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESOLUTION DISPLAY
+═══════════════════════════════════════════════════════════════ */
+function displayResolution(state) {
+  hide('div-rolling');
+  hide('div-favor');
+  hide('div-opp-dice');
+  hide('div-my-dice-static');
+  show('div-resolution');
+
+  const res = state.lastResolution;
+  if(!res) return;
+  const myR  = res[me()];
+  const thR  = res[opp()];
+  const myP  = state[me()];
+  const thP  = state[opp()];
+
+  const statRow = (label, val, cls='') =>
+    `<div class="res-stat"><span class="res-stat-label">${label}</span><span class="res-stat-val ${cls}">${val}</span></div>`;
+
+  document.getElementById('resolution-content').innerHTML = `
+    <div class="resolution-grid">
+      <div class="res-player">
+        <div class="res-player-name">⚔ ${myP.name}</div>
+        ${statRow('Melee attacks', myR.matk)}
+        ${statRow('Ranged attacks', myR.ratk)}
+        ${statRow('Melee blocks', myR.mblk)}
+        ${statRow('Range blocks', myR.rblk)}
+        ${myR.pierce?statRow('Piercing dmg', '+'+myR.pierce, 'dmg'):''}
+        ${myR.toks>0?statRow('Tokens earned', '+'+myR.toks, 'tok'):''}
+        <hr style="border-color:var(--border);margin:8px 0;">
+        ${statRow('Damage dealt', myR.dealt, 'dmg')}
+        ${statRow('Damage taken', myR.taken, 'dmg')}
+        ${statRow('Health now', `${myP.stones}/${myP.maxStones}`, myP.stones>0?'heal':'dmg')}
+        ${statRow('Tokens', myP.tokens, 'tok')}
+      </div>
+      <div class="res-vs">
+        <span>VS</span><br>
+        <span class="vs-total-dmg">${myR.dealt}</span>
+        <span style="font-size:0.7rem;color:var(--textdim);">vs</span><br>
+        <span class="vs-total-dmg">${thR.dealt}</span>
+      </div>
+      <div class="res-player">
+        <div class="res-player-name">⚔ ${thP.name}</div>
+        ${statRow('Melee attacks', thR.matk)}
+        ${statRow('Ranged attacks', thR.ratk)}
+        ${statRow('Melee blocks', thR.mblk)}
+        ${statRow('Range blocks', thR.rblk)}
+        ${thR.pierce?statRow('Piercing dmg', '+'+thR.pierce, 'dmg'):''}
+        ${thR.toks>0?statRow('Tokens earned', '+'+thR.toks, 'tok'):''}
+        <hr style="border-color:var(--border);margin:8px 0;">
+        ${statRow('Damage dealt', thR.dealt, 'dmg')}
+        ${statRow('Damage taken', thR.taken, 'dmg')}
+        ${statRow('Health now', `${thP.stones}/${thP.maxStones}`, thP.stones>0?'heal':'dmg')}
+        ${statRow('Tokens', thP.tokens, 'tok')}
+      </div>
+    </div>`;
+
+  setPhaseBar(`Round ${state.round} resolved. Ready for the next clash?`);
+  document.getElementById('btn-next-round').style.display = '';
+}
+
+async function nextRound() {
+  const state = await loadState();
+  if(!state || state.phase!=='resolution') return;
+  state.round++;
+  state.phase = 'rolling';
+  state.favorResolved = false;
+  rollForBoth(state);
+  rlog(state, `— Round ${state.round} begins! —`);
+  await saveState(state);
+
+  // Reset local flags
+  localDice = [];
+  localKept = [false,false,false,false,false,false];
+  localRerolls = 0;
+  diceLockedLocally = false;
+  favorLockedLocally = false;
+  selectedActivation = 'skip';
+  favorPanelBuilt = false;
+
+  // Sync local dice from state
+  localDice = [...state[me()].dice];
+  localKept = [...state[me()].kept];
+  localRerolls = 0;
+
+  showScreen('game');
+  updateGameDisplay(state);
+
+  // Bot game: trigger bot for new round
+  if(isBotGame) botTakeTurn('rolling');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME OVER
+═══════════════════════════════════════════════════════════════ */
+function showGameOver(state) {
+  if(document.querySelector('.gameover-overlay')) return;
+  const winner = state.winner;
+  const isMe   = winner===me();
+  const isDraw = winner==='draw';
+  const winnerName = isDraw ? '' : state[winner].name;
+
+  const [cls, title, desc] = isDraw
+    ? ['draw', '⚔ Draw ⚔', 'Both warriors fell in the same moment. Your sagas are equally told.']
+    : isMe
+      ? ['win', '⚔ Victory! ⚔', `The gods have blessed your dice, ${state[me()].name}. You are victorious!`]
+      : ['lose', '💀 Defeated', `${winnerName} has bested you in battle. Your saga continues another day.`];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'gameover-overlay';
+  overlay.innerHTML = `
+    <div class="gameover-box">
+      <div class="gameover-title ${cls}">${title}</div>
+      <p class="gameover-desc">${desc}</p>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="location.reload()">⚔ Play Again</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════════════════ */
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+function setPhaseBar(msg) {
+  document.getElementById('phase-text').textContent = msg;
+}
+
+function toggleKey() {
+  const content = document.getElementById('symbol-key-content');
+  const icon    = document.getElementById('key-toggle-icon');
+  const isHidden = content.classList.contains('hidden');
+  content.classList.toggle('hidden');
+  icon.textContent = isHidden ? '▲ hide' : '▼ show';
+}
+
+// Init: hide game-only divs
+hide('div-rolling');
+hide('div-opp-dice');
+hide('div-my-dice-static');
+hide('div-favor');
+hide('div-resolution');
+
+// Enter keypress helpers
+document.getElementById('join-code').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
+document.getElementById('player-name').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('join-code').focus(); });
+</script>
+</body>
+</html>
