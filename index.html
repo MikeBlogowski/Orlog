@@ -730,6 +730,67 @@ body > * { position: relative; z-index: 1; }
 
 .log-entry.highlight { color: var(--stone); }
 
+/* ═══════════════════════════════════════════════════
+   TURN INDICATOR & COIN FLIP
+═══════════════════════════════════════════════════ */
+.turn-indicator {
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  transition: all 0.3s;
+}
+.turn-indicator.my-turn {
+  background: rgba(200,153,58,0.12);
+  border: 1px solid var(--gold);
+  color: var(--goldb);
+}
+.turn-indicator.their-turn {
+  background: rgba(90,74,106,0.15);
+  border: 1px solid var(--border);
+  color: var(--textdim);
+  font-style: italic;
+}
+
+.roll-counter-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.roll-counter-item {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  color: var(--textdim);
+}
+.roll-counter-item .rci-name { margin-bottom: 3px; }
+.roll-counter-pips { display: flex; gap: 4px; margin-top: 4px; }
+.roll-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); }
+.roll-pip.used { background: var(--border); }
+
+.coin-wrap { text-align: center; padding: 20px 0 8px; }
+.coin-emoji {
+  font-size: 4.5rem;
+  display: inline-block;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 16px rgba(200,153,58,0.5));
+}
+.coin-emoji.flipping { animation: coinSpin 1s cubic-bezier(0.4,0,0.2,1); }
+@keyframes coinSpin {
+  0%   { transform: rotateY(0deg) scale(1); }
+  40%  { transform: rotateY(900deg) scale(1.15); }
+  100% { transform: rotateY(1440deg) scale(1); }
+}
+.coin-result {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  color: var(--goldb);
+  margin-top: 8px;
+  min-height: 1.6em;
+}
+
 .key-row {
   font-size: 0.88rem;
   color: var(--textdim);
@@ -941,19 +1002,39 @@ body > * { position: relative; z-index: 1; }
       <span id="phase-text">Preparing...</span>
     </div>
 
-    <!-- ROLLING PHASE -->
-    <div id="div-rolling" class="card hidden">
-      <div class="flex items-center gap8 mb8">
-        <div class="card-title mb8" style="margin-bottom:0;">Your Dice</div>
-        <div style="margin-left:auto;" class="reroll-info" id="reroll-info">
-          Rerolls: <span class="reroll-pips" id="pip-display"></span>
-        </div>
+    <!-- COIN FLIP -->
+    <div id="div-coin-flip" class="card hidden">
+      <div class="card-title text-center">The Norns Cast Fate</div>
+      <div class="coin-wrap">
+        <div id="coin-emoji" class="coin-emoji">🪙</div>
+        <div class="coin-result" id="coin-result"> </div>
       </div>
-      <p class="text-dim mb12" style="font-size:0.82rem; font-style:italic;">Click dice to keep them, then reroll the rest (up to 2 times). Lock when satisfied.</p>
-      <div class="dice-row" id="my-dice-row"></div>
+      <div class="btn-group mt12" id="coin-btn-wrap">
+        <button class="btn btn-primary" id="btn-flip-coin" onclick="doFlipCoin()">🪙 Flip the Coin</button>
+      </div>
+      <p id="coin-wait-msg" class="waiting-msg mt12 hidden">Awaiting the coin's fate...</p>
+    </div>
+
+    <!-- ROLLING PHASE (turn-based) -->
+    <div id="div-rolling" class="card hidden">
+      <div id="turn-indicator" class="turn-indicator my-turn">Your Turn</div>
+      <div class="roll-counter-row" id="roll-counter-row"></div>
+
+      <div id="dice-area-me">
+        <div class="card-title" id="dice-label-me" style="margin-bottom:10px;">Your Dice</div>
+        <p id="dice-hint-me" class="text-dim mb12" style="font-size:0.88rem;font-style:italic;display:none;">Click dice to mark them as kept. Unkept dice will be rerolled next turn.</p>
+        <div class="dice-row" id="my-dice-row"></div>
+      </div>
+
+      <hr class="divider">
+
+      <div id="dice-area-opp">
+        <div class="card-title" id="dice-label-opp" style="margin-bottom:10px;">Opponent's Dice</div>
+        <div class="dice-row" id="opp-rolling-dice-row"></div>
+      </div>
+
       <div class="btn-group mt16">
-        <button class="btn" id="btn-reroll" onclick="doReroll()">🎲 Reroll Unkept</button>
-        <button class="btn btn-primary" id="btn-lock" onclick="lockDice()">🔒 Lock Dice</button>
+        <button class="btn btn-primary" id="btn-pass-turn" onclick="passTurn()" disabled>Pass Turn →</button>
       </div>
     </div>
 
@@ -1118,15 +1199,13 @@ let isBotGame    = false;
 let botDifficulty= 'medium'; // 'easy' | 'medium' | 'hard'
 let botState     = null;  // local copy of game state for bot games
 
-// Local dice state (to avoid overwriting opponent on every keystroke)
-let localDice  = [];
+// Local dice state for interactive rolling on your turn
 let localKept  = [false,false,false,false,false,false];
-let localRerolls = 0;
-let diceLockedLocally = false;
-let favorLockedLocally= false;
-let selectedFavor = null;       // for favor select screen
-let selectedActivation = 'skip';// for in-game favor phase
-let favorPanelBuilt = false;    // prevents favor panel from being rebuilt on every poll tick
+let myTurnStarted    = false;  // have we synced localKept from state this turn?
+let passedTurnLocally= false;  // have we passed our turn yet this round?
+let favorLockedLocally = false; // have we submitted our favor choice this round?
+let selectedFavor    = null;   // for favor select screen
+let selectedActivation = 'skip'; // for in-game favor phase
 
 function me()  { return myRole; }
 function opp() { return myRole==='p1'?'p2':'p1'; }
@@ -1159,15 +1238,16 @@ async function startBotGame() {
   roomCode = 'BOT-'+Math.random();
 
   const state = {
-    phase:'favor_select', round:1, winner:null, log:['You challenge the Bot Jarl!'],
-    lastResolution:null, favorResolved:false,
+    phase:'favor_select', round:1, winner:null,
+    log:['You challenge the Bot Jarl! Choose your divine patron.'],
+    lastResolution:null, favorResolved:false, coinWinner:null, rollingTurn:null,
     p1: makePlayer(name),
     p2: makePlayer('Bot Jarl')
   };
-  // Bot picks a random favor upfront
+  // Bot picks favor upfront
   const favorKeys = Object.keys(FAVORS);
-  state.p2.godFavor  = botPickFavor(state, favorKeys);
-  state.p2.favorReady= true;
+  state.p2.godFavor   = botPickFavor(state, favorKeys);
+  state.p2.favorReady = true;
   await saveState(state);
 
   showScreen('favor');
@@ -1202,33 +1282,60 @@ function scoreDie(val, difficulty) {
   return (base[f.type]||0) + tokenBonus;
 }
 
-// --- Bot rolling phase ---
-function botDoRolling(state) {
+// --- Bot rolling turn ---
+async function botDoRollingTurn() {
+  const delay = botDifficulty==='easy' ? 1600 : botDifficulty==='medium' ? 1100 : 650;
+  await new Promise(r=>setTimeout(r, delay));
+
+  const state = await loadState();
+  if(!state || state.phase!=='rolling' || state.rollingTurn!=='p2') return;
+
   const bot = state.p2;
-  // Simulate up to 2 rerolls
-  const maxRolls = botDifficulty==='easy' ? 1 : 2;
-  // Start: keep dice above a threshold
-  function keepThreshold(roll) {
-    if(botDifficulty==='easy')   return 2;  // keep only very good dice
-    if(botDifficulty==='medium') return 2;
-    return 3;  // hard: keep more
+  // Decide what to keep based on scoring
+  const threshold = botDifficulty==='hard' ? 3 : botDifficulty==='medium' ? 2 : 2;
+  bot.kept = bot.dice.map(v => scoreDie(v, botDifficulty) >= threshold);
+
+  // On easy difficulty, randomly un-keep some good dice occasionally
+  if(botDifficulty==='easy') {
+    bot.kept = bot.kept.map(k => k && Math.random() > 0.25 ? k : false);
   }
 
-  let dice = rollN(6);
-  let kept  = dice.map(v => scoreDie(v, botDifficulty) >= keepThreshold());
+  bot.rollsUsed++;
+  if(bot.rollsUsed >= 3) bot.locked = true;
 
-  for(let r=0; r<maxRolls; r++) {
-    // Reroll unkept
-    dice = dice.map((v,i) => kept[i] ? v : Math.floor(Math.random()*6));
-    // Re-evaluate what to keep
-    const threshold = r===0 ? 2 : 1; // lower bar on final reroll
-    kept = dice.map(v => scoreDie(v, botDifficulty) >= threshold);
+  // Switch turn to player
+  state.rollingTurn = 'p1';
+
+  // Roll player's unkept dice for their next turn
+  if(!state.p1.locked) {
+    state.p1.dice = state.p1.dice.map((v,i) =>
+      state.p1.kept[i] ? v : Math.floor(Math.random()*6)
+    );
   }
 
-  bot.dice    = dice;
-  bot.kept    = kept;
-  bot.rerolls = maxRolls;
-  bot.locked  = true;
+  if(state.p1.locked && state.p2.locked) {
+    state.phase = 'favor_phase';
+    state.favorResolved = false;
+    rlog(state, `All dice locked! Time to invoke the gods.`);
+  } else {
+    const nextRollNum = state.p1.rollsUsed + 1;
+    rlog(state, `Bot Jarl passed. Your roll ${nextRollNum}/3.`);
+  }
+
+  // Reset local state so player can interact with their new dice
+  passedTurnLocally = false;
+  myTurnStarted = false;
+  localKept = [...state.p1.kept];
+  myTurnStarted = true;
+  lastState = state;
+
+  await saveState(state);
+  updateGameDisplay(state);
+
+  if(state.phase === 'favor_phase') {
+    // Bot favor is now triggered from passTurn, not here — nothing to do
+    return;
+  }
 }
 
 // --- Bot favor activation ---
@@ -1273,35 +1380,13 @@ function botPickActivation(state) {
   return 'skip';
 }
 
-// --- Main bot turn orchestrator (called after player locks or submits favor) ---
+// --- Main bot turn orchestrator ---
 async function botTakeTurn(triggerPhase) {
-  // Small delay to feel natural
-  const delay = botDifficulty==='easy' ? 1800 : botDifficulty==='medium' ? 1200 : 700;
-  await new Promise(r=>setTimeout(r, delay));
-
-  const state = await loadState();
-  if(!state) return;
-
-  if(triggerPhase==='rolling' && !state.p2.locked) {
-    botDoRolling(state);
-    const bothLocked = state.p1.locked && state.p2.locked;
-    if(bothLocked) {
-      state.phase = 'favor_phase';
-      state.favorResolved = false;
-      rlog(state, `Bot Jarl has locked their dice!`);
-    }
-    await saveState(state);
-    updateGameDisplay(state);
-
-    // If both locked and player already set favor... unlikely but handle
-    if(state.phase==='favor_phase') {
-      await new Promise(r=>setTimeout(r, delay));
-      botSubmitFavor();
-    }
+  if(triggerPhase==='rolling') {
+    await botDoRollingTurn();
     return;
   }
-
-  if(triggerPhase==='favor' && state.p2.favorChoice===null) {
+  if(triggerPhase==='favor') {
     await botSubmitFavor();
     return;
   }
@@ -1317,13 +1402,14 @@ async function botSubmitFavor() {
   state.p2.favorChoice = botPickActivation(state);
   rlog(state, `Bot Jarl has chosen their favor.`);
 
-  const bothIn2 = state.p1.favorChoice!==null && state.p2.favorChoice!==null;
-  if(bothIn2 && !state.favorResolved) {
+  const bothIn = state.p1.favorChoice !== null && state.p2.favorChoice !== null;
+  if(bothIn && !state.favorResolved) {
     state.favorResolved = true;
     resolveRound(state);
     if(state.phase !== 'game_over') state.phase = 'resolution';
   }
   await saveState(state);
+  lastState = state;
   updateGameDisplay(state);
   if(state.phase === 'game_over') { showGameOver(state); clearInterval(pollTimer); }
 }
@@ -1344,15 +1430,16 @@ function rlog(state, msg) { state.log.unshift(msg); if(state.log.length>40) stat
 
 function makePlayer(name) {
   return { name, stones:15, maxStones:15, tokens:0, godFavor:null, favorReady:false,
-           dice:[], kept:[false,false,false,false,false,false], rerolls:0,
+           dice:[], kept:[false,false,false,false,false,false], rollsUsed:0,
            locked:false, favorChoice:null };
 }
 
-function rollForBoth(state) {
+function initRollingRound(state) {
+  // Roll initial dice for both (pre-rolled so both sides always visible)
   for(const role of ['p1','p2']) {
     state[role].dice = rollN(6);
     state[role].kept = [false,false,false,false,false,false];
-    state[role].rerolls = 0;
+    state[role].rollsUsed = 0;
     state[role].locked = false;
     state[role].favorChoice = null;
   }
@@ -1375,7 +1462,7 @@ async function createRoom() {
   myRole = 'p1';
   const state = {
     phase: 'lobby', round: 1, winner: null, log: [`${name} opened the arena.`],
-    lastResolution: null, favorResolved: false,
+    lastResolution: null, favorResolved: false, coinWinner: null, rollingTurn: null,
     p1: makePlayer(name),
     p2: makePlayer(null)
   };
@@ -1404,6 +1491,61 @@ async function joinRoom() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   COIN FLIP
+═══════════════════════════════════════════════════════════════ */
+async function doFlipCoin() {
+  document.getElementById('btn-flip-coin').disabled = true;
+  document.getElementById('coin-wait-msg').classList.remove('hidden');
+  const coin = document.getElementById('coin-emoji');
+  coin.classList.add('flipping');
+  await new Promise(r => setTimeout(r, 1000));
+  coin.classList.remove('flipping');
+
+  const state = await loadState();
+  if(!state) return;
+  state.coinWinner = Math.random() < 0.5 ? 'p1' : 'p2';
+  state.phase = 'rolling';
+  state.rollingTurn = state.coinWinner;
+  initRollingRound(state);
+  const winnerName = state[state.coinWinner].name;
+  rlog(state, `The coin favours ${winnerName}! They roll first. Round 1 begins!`);
+  await saveState(state);
+
+  resetRoundLocalState(state);
+  updateGameDisplay(state);
+  if(isBotGame && state.rollingTurn === 'p2') botTakeTurn('rolling');
+}
+
+async function autoCoinFlip() {
+  // Bot/auto version: show animation then flip
+  show('div-coin-flip');
+  hide('div-rolling');
+  document.getElementById('coin-btn-wrap').classList.add('hidden');
+  document.getElementById('coin-result').textContent = 'Flipping...';
+  const coin = document.getElementById('coin-emoji');
+  coin.classList.add('flipping');
+  await new Promise(r => setTimeout(r, 1000));
+  coin.classList.remove('flipping');
+
+  const state = await loadState();
+  if(!state) return;
+  state.coinWinner = Math.random() < 0.5 ? 'p1' : 'p2';
+  state.phase = 'rolling';
+  state.rollingTurn = state.coinWinner;
+  initRollingRound(state);
+  const winnerName = state[state.coinWinner].name;
+  document.getElementById('coin-result').textContent = `${winnerName} goes first!`;
+  rlog(state, `The coin favours ${winnerName}! They roll first. Round 1 begins!`);
+  await saveState(state);
+
+  await new Promise(r => setTimeout(r, 1200));
+  hide('div-coin-flip');
+  resetRoundLocalState(state);
+  updateGameDisplay(state);
+  if(state.rollingTurn === 'p2') botTakeTurn('rolling');
+}
+
+/* ═══════════════════════════════════════════════════════════════
    POLLING
 ═══════════════════════════════════════════════════════════════ */
 function startPolling() {
@@ -1420,34 +1562,44 @@ async function pollUpdate() {
   // Bot game: just update display from local state
   if(isBotGame) {
     if(state.phase==='game_over') { showGameOver(state); clearInterval(pollTimer); return; }
-    if(['rolling','favor_phase','resolution'].includes(state.phase)) {
+    if(state.phase==='favor_select') return; // player is still choosing their god — don't interfere
+    if(['coin_flip','rolling','favor_phase','resolution'].includes(state.phase)) {
       if(curScreen!=='screen-game') showScreen('game');
       updateGameDisplay(state);
     }
     return;
   }
 
+  // Multiplayer transitions:
   // Waiting → Favor select
   if(state.phase==='favor_select' && curScreen==='screen-waiting') {
-    showScreen('favor');
-    buildFavorGrid();
-    return;
+    showScreen('favor'); buildFavorGrid(); return;
   }
 
-  // Favor select → Game
-  if(state.phase==='rolling' && curScreen==='screen-favor') {
+  // Favor select → coin flip / game
+  if((state.phase==='coin_flip' || state.phase==='rolling') && curScreen==='screen-favor') {
     showScreen('game');
-    diceLockedLocally = false;
-    favorLockedLocally = false;
+    resetRoundLocalState(state);
     favorPanelBuilt = false;
   }
 
-  // Fix missed phase transitions (fallback in case race condition)
-  if(state.phase==='rolling' && state.p1.locked && state.p2.locked) {
-    state.phase = 'favor_phase';
-    await saveState(state);
+  // Coin flip: p2 may need to show the coin flip UI; p1 will do the flip
+  if(state.phase==='coin_flip' && curScreen==='screen-game') {
+    updateGameDisplay(state);
+    return;
   }
 
+  // Guard: if rolling phase and it just became my turn (opponent passed), reset local flags
+  if(state.phase==='rolling') {
+    const isMyTurn = state.rollingTurn === me();
+    if(isMyTurn && passedTurnLocally) {
+      // Our turn came back around after opponent went
+      passedTurnLocally = false;
+      myTurnStarted = false;
+    }
+  }
+
+  // favor_phase: check if both submitted and we need to resolve
   if(state.phase==='favor_phase' && state.p1.favorChoice!==null && state.p2.favorChoice!==null && !state.favorResolved) {
     state.favorResolved = true;
     resolveRound(state);
@@ -1455,23 +1607,11 @@ async function pollUpdate() {
     await saveState(state);
   }
 
-  // Game over
-  if(state.phase==='game_over') {
-    showGameOver(state);
-    clearInterval(pollTimer);
-    return;
-  }
+  if(state.phase==='game_over') { showGameOver(state); clearInterval(pollTimer); return; }
 
-  // Update game display if in game screen
   if(['rolling','favor_phase','resolution'].includes(state.phase)) {
     if(curScreen!=='screen-game') showScreen('game');
     updateGameDisplay(state);
-  }
-
-  // If we just moved to a new round, reset local flags
-  if(state.phase==='rolling' && diceLockedLocally && !state[me()].locked) {
-    diceLockedLocally = false;
-    favorLockedLocally = false;
   }
 }
 
@@ -1511,27 +1651,37 @@ async function confirmFavor() {
   state[me()].favorReady = true;
   const o = state[opp()];
   if(o.favorReady || isBotGame) {
-    // Both ready — start!
-    state.phase = 'rolling';
-    rollForBoth(state);
+    // Both ready — go to coin flip
+    state.phase = 'coin_flip';
+    state.coinWinner = null; // will be set when coin is flipped
     const botMsg = isBotGame ? ' The Bot Jarl sharpens their axe.' : '';
-    rlog(state, `Both warriors have chosen their patron. Round 1 begins!${botMsg}`);
+    rlog(state, `Both warriors have chosen their patron.${botMsg} The Norns cast their coin!`);
   }
   document.getElementById('confirm-favor-btn').disabled = true;
   document.getElementById('favor-wait-msg').classList.remove('hidden');
   await saveState(state);
 
-  if(isBotGame) {
+  if(isBotGame && state.phase === 'coin_flip') {
     showScreen('game');
-    diceLockedLocally = false;
-    favorLockedLocally = false;
-    favorPanelBuilt = false;
-    localDice = [...state.p1.dice];
-    localKept = [...state.p1.kept];
-    localRerolls = 0;
     updateGameDisplay(state);
-    // Bot rolls dice in background
-    botTakeTurn('rolling');
+    // Auto-flip coin for bot game after brief delay
+    setTimeout(() => autoCoinFlip(), 600);
+  }
+}
+
+function resetRoundLocalState(state) {
+  passedTurnLocally  = false;
+  myTurnStarted      = false;
+  favorLockedLocally = false;
+  selectedActivation = 'skip';
+  localKept = [false,false,false,false,false,false];
+  // Clear the favor panel content so it rebuilds fresh next round
+  const fc = document.getElementById('favor-activate-content');
+  if(fc) fc.innerHTML = '';
+  // Pre-sync if it's immediately our turn
+  if(state && state.rollingTurn === me()) {
+    localKept = [...state[me()].kept];
+    myTurnStarted = true;
   }
 }
 
@@ -1559,9 +1709,23 @@ function updateGameDisplay(state) {
 
   renderLog(state.log);
 
+  if(state.phase==='coin_flip')   displayCoinFlipPhase(state);
   if(state.phase==='rolling')     displayRollingPhase(state);
   if(state.phase==='favor_phase') displayFavorPhase(state);
   if(state.phase==='resolution')  displayResolution(state);
+}
+
+function displayCoinFlipPhase(state) {
+  hide('div-rolling'); hide('div-my-dice-static'); hide('div-opp-dice');
+  hide('div-favor'); hide('div-resolution');
+  show('div-coin-flip');
+
+  const isP1 = me() === 'p1';
+  document.getElementById('coin-result').textContent = '';
+  document.getElementById('coin-wait-msg').classList.toggle('hidden', isP1);
+  document.getElementById('coin-btn-wrap').classList.toggle('hidden', !isP1);
+  document.getElementById('btn-flip-coin').disabled = false;
+  setPhaseBar(isP1 ? 'Flip the coin to decide who rolls first!' : 'Waiting for your opponent to flip the coin...');
 }
 
 function renderStones(id, stones, max) {
@@ -1580,177 +1744,198 @@ function renderLog(log) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ROLLING PHASE
+   ROLLING PHASE (TURN-BASED)
 ═══════════════════════════════════════════════════════════════ */
 function displayRollingPhase(state) {
-  hide('div-opp-dice');
+  hide('div-coin-flip');
   hide('div-my-dice-static');
+  hide('div-opp-dice');
   hide('div-favor');
   hide('div-resolution');
   show('div-rolling');
 
   const myP = state[me()];
   const thP = state[opp()];
+  const isMyTurn = state.rollingTurn === me() && !passedTurnLocally;
 
-  if(!diceLockedLocally) {
-    // Sync local dice from state only if not already rolling locally
-    if(localDice.length===0) {
-      localDice   = [...myP.dice];
-      localKept   = [...myP.kept];
-      localRerolls = myP.rerolls;
-    }
-    renderMyDice(false);
-    updateRerollPips();
-    document.getElementById('btn-reroll').disabled = localRerolls>=2;
-    document.getElementById('btn-lock').disabled = false;
-
-    const oppStatus = thP.locked ? '✓ Opponent locked in!' : '⏳ Opponent is rolling...';
-    setPhaseBar(thP.locked
-      ? `${thP.name} has locked their dice. Lock yours to proceed!`
-      : `Roll and keep your dice. ${thP.name} is choosing theirs.`);
+  // Turn indicator
+  const turnEl = document.getElementById('turn-indicator');
+  if(isMyTurn) {
+    turnEl.className = 'turn-indicator my-turn';
+    turnEl.textContent = `⚔ Your Turn — Roll ${myP.rollsUsed + 1} of 3`;
   } else {
-    // I'm locked, show my locked dice statically
-    hide('div-rolling');
-    show('div-my-dice-static');
-    renderDiceRow('my-dice-static-row', myP.dice, myP.kept, false, true);
-    setPhaseBar(thP.locked
-      ? 'Both warriors have locked! Moving to the God Favor phase...'
-      : `Awaiting ${thP.name} to lock their dice...`);
+    turnEl.className = 'turn-indicator their-turn';
+    if(passedTurnLocally) {
+      turnEl.textContent = `⏳ Awaiting ${thP.name}'s Roll ${thP.rollsUsed + 1} of 3...`;
+    } else {
+      turnEl.textContent = `⏳ ${thP.name}'s Turn — Roll ${thP.rollsUsed + 1} of 3`;
+    }
+  }
+
+  // Roll counter pips
+  renderRollCounters(myP, thP);
+
+  // My dice
+  if(isMyTurn) {
+    if(!myTurnStarted) {
+      localKept = [...myP.kept];
+      myTurnStarted = true;
+    }
+    document.getElementById('dice-label-me').textContent = `Your Dice — Choose what to keep`;
+    document.getElementById('dice-hint-me').style.display = '';
+    renderMyDice();
+    document.getElementById('btn-pass-turn').disabled = false;
+  } else {
+    document.getElementById('dice-label-me').textContent =
+      myP.locked ? `Your Final Dice` : `Your Dice`;
+    document.getElementById('dice-hint-me').style.display = 'none';
+    renderDiceStatic('my-dice-row', myP.dice, myP.kept);
+    document.getElementById('btn-pass-turn').disabled = true;
+  }
+
+  // Opponent dice (always visible, read-only)
+  document.getElementById('dice-label-opp').textContent =
+    thP.locked ? `${thP.name}'s Final Dice` :
+    thP.rollsUsed === 0 ? `${thP.name}'s Dice` :
+    `${thP.name}'s Dice (Roll ${thP.rollsUsed} done)`;
+  renderDiceStatic('opp-rolling-dice-row', thP.dice, thP.kept);
+
+  // Phase bar
+  if(isMyTurn) {
+    setPhaseBar(`Your turn (${myP.rollsUsed + 1}/3). Click dice to keep, then pass.`);
+  } else if(passedTurnLocally) {
+    setPhaseBar(`Waiting for ${thP.name}...`);
+  } else {
+    setPhaseBar(`${thP.name} is deciding which dice to keep...`);
   }
 }
 
-function renderMyDice(animate) {
+function renderRollCounters(myP, thP) {
+  const el = document.getElementById('roll-counter-row');
+  function pips(used) {
+    return `<div class="roll-counter-pips">${[0,1,2].map(i=>
+      `<div class="roll-pip${i<used?' used':''}"></div>`).join('')}</div>`;
+  }
+  el.innerHTML = `
+    <div class="roll-counter-item">
+      <div class="rci-name">${myP.name} ${myP.locked?'✓':''}</div>
+      ${pips(myP.rollsUsed)}
+    </div>
+    <div class="roll-counter-item" style="text-align:right;">
+      <div class="rci-name">${thP.locked?'✓':''} ${thP.name}</div>
+      ${pips(thP.rollsUsed)}
+    </div>`;
+}
+
+function renderMyDice() {
   const row = document.getElementById('my-dice-row');
   row.innerHTML = '';
-  localDice.forEach((val,i) => {
+  (lastState ? lastState[me()].dice : []).forEach((val,i) => {
     const face = FACES[val];
     const d = document.createElement('div');
-    d.className = 'die interactive' + (localKept[i]?' kept':'') + (animate?' rolling':'');
-    d.onclick = () => { localKept[i]=!localKept[i]; renderMyDice(false); };
+    d.className = 'die interactive' + (localKept[i]?' kept':'');
+    d.onclick = () => { localKept[i]=!localKept[i]; renderMyDice(); };
     d.innerHTML = `<span class="die-face">${face.icon}</span><span class="die-label">${face.label}</span>`;
-    if(face.hasToken) {
-      const tok = document.createElement('div');
-      tok.className = 'die-token';
-      d.appendChild(tok);
-    }
+    if(face.hasToken) { const t=document.createElement('div'); t.className='die-token'; d.appendChild(t); }
     row.appendChild(d);
   });
 }
 
-function renderDiceRow(containerId, dice, kept, interactive, locked) {
+function renderDiceStatic(containerId, dice, kept) {
   const row = document.getElementById(containerId);
+  if(!row) return;
   row.innerHTML = '';
-  dice.forEach((val,i) => {
+  (dice||[]).forEach((val,i) => {
     const face = FACES[val];
     const d = document.createElement('div');
-    d.className = 'die die-opponent' + (locked?' locked-die':'') + (kept&&kept[i]?' kept':'');
+    d.className = 'die die-opponent locked-die' + (kept&&kept[i]?' kept':'');
     d.innerHTML = `<span class="die-face">${face.icon}</span><span class="die-label">${face.label}</span>`;
-    if(face.hasToken) {
-      const tok = document.createElement('div');
-      tok.className = 'die-token';
-      d.appendChild(tok);
-    }
+    if(face.hasToken) { const t=document.createElement('div'); t.className='die-token'; d.appendChild(t); }
     row.appendChild(d);
   });
 }
 
-function updateRerollPips() {
-  const el = document.getElementById('pip-display');
-  el.innerHTML = '';
-  for(let i=0;i<2;i++) {
-    const p = document.createElement('div');
-    p.className = 'pip' + (i<localRerolls?' used':'');
-    el.appendChild(p);
-  }
-  document.getElementById('reroll-info').innerHTML =
-    `Rerolls: <span class="reroll-pips" id="pip-display">${el.innerHTML}</span>`;
-  // Re-insert pips after innerHTML
-  const newPips = document.getElementById('pip-display');
-  if(newPips) {
-    newPips.innerHTML='';
-    for(let i=0;i<2;i++) {
-      const p=document.createElement('div');
-      p.className='pip'+(i<localRerolls?' used':'');
-      newPips.appendChild(p);
-    }
-  }
+// Keep renderDiceRow for favor phase compatibility
+function renderDiceRow(containerId, dice, kept, interactive, locked) {
+  renderDiceStatic(containerId, dice, kept);
 }
 
-async function doReroll() {
-  if(localRerolls>=2 || diceLockedLocally) return;
-  localRerolls++;
-  localDice = localDice.map((v,i) => localKept[i] ? v : Math.floor(Math.random()*6));
-  renderMyDice(true);
-  updateRerollPips();
-  document.getElementById('btn-reroll').disabled = localRerolls>=2;
-
-  // Persist to shared state
+async function passTurn() {
+  if(passedTurnLocally) return;
   const state = await loadState();
-  if(state) {
-    state[me()].dice    = [...localDice];
-    state[me()].kept    = [...localKept];
-    state[me()].rerolls = localRerolls;
-    await saveState(state);
+  if(!state || state.phase!=='rolling' || state.rollingTurn!==me()) return;
+
+  passedTurnLocally = true;
+  document.getElementById('btn-pass-turn').disabled = true;
+
+  // Save my kept choices
+  state[me()].kept = [...localKept];
+  state[me()].rollsUsed++;
+  if(state[me()].rollsUsed >= 3) state[me()].locked = true;
+
+  const nextPlayer = opp();
+  state.rollingTurn = nextPlayer;
+
+  // Roll next player's unkept dice ready for their turn
+  if(!state[nextPlayer].locked) {
+    state[nextPlayer].dice = state[nextPlayer].dice.map((v,i) =>
+      state[nextPlayer].kept[i] ? v : Math.floor(Math.random()*6)
+    );
   }
-}
 
-async function lockDice() {
-  if(diceLockedLocally) return;
-  diceLockedLocally = true;
-  document.getElementById('btn-reroll').disabled = true;
-  document.getElementById('btn-lock').disabled   = true;
-
-  const state = await loadState();
-  if(!state) return;
-  state[me()].dice   = [...localDice];
-  state[me()].kept   = [...localKept];
-  state[me()].locked = true;
-
-  if(state[opp()].locked) {
+  // Check if both are now locked (both used 3 rolls)
+  if(state.p1.locked && state.p2.locked) {
     state.phase = 'favor_phase';
     state.favorResolved = false;
-    rlog(state, `Both warriors locked their dice! Time to invoke the gods.`);
+    rlog(state, `All dice locked! Time to invoke the gods.`);
+  } else {
+    const nextRollNum = state[nextPlayer].rollsUsed + 1;
+    rlog(state, `${state[me()].name} passed. ${state[nextPlayer].name}'s roll ${nextRollNum}/3.`);
   }
-  await saveState(state);
 
-  // Bot game: trigger bot rolling phase
-  if(isBotGame && !state.p2.locked) {
+  lastState = state;
+  await saveState(state);
+  updateGameDisplay(state);
+
+  // Bot game: trigger bot rolling if it became bot's turn
+  if(isBotGame && nextPlayer==='p2' && !state.p2.locked) {
     botTakeTurn('rolling');
   }
-
-  // Update display immediately
-  hide('div-rolling');
-  show('div-my-dice-static');
-  renderDiceRow('my-dice-static-row', localDice, localKept, false, true);
-  setPhaseBar(state[opp()].locked
-    ? 'Both locked! Time to invoke the gods...'
-    : `Dice locked. Awaiting ${state[opp()].name}...`);
+  // Bot game: if we just entered favor phase, schedule bot's favor choice
+  if(state.phase==='favor_phase' && isBotGame) {
+    const botFavorDelay = botDifficulty==='easy' ? 2000 : botDifficulty==='medium' ? 1400 : 900;
+    setTimeout(() => botTakeTurn('favor'), botFavorDelay);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    FAVOR PHASE
 ═══════════════════════════════════════════════════════════════ */
 function displayFavorPhase(state) {
+  hide('div-coin-flip');
   hide('div-rolling');
   hide('div-resolution');
   show('div-my-dice-static');
   show('div-opp-dice');
   show('div-favor');
 
-  const myP  = state[me()];
-  const thP  = state[opp()];
+  const myP = state[me()];
+  const thP = state[opp()];
 
-  renderDiceRow('my-dice-static-row', myP.dice, myP.kept, false, true);
-  renderDiceRow('opp-dice-row', thP.dice, thP.kept, false, true);
+  renderDiceStatic('my-dice-static-row', myP.dice, myP.kept);
+  renderDiceStatic('opp-dice-row', thP.dice, thP.kept);
 
   if(!favorLockedLocally) {
-    if(!favorPanelBuilt) {
-      buildFavorActivation(myP);
-      favorPanelBuilt = true;
-    }
+    // Enable the button FIRST before anything else that could fail
     document.getElementById('btn-submit-favor').disabled = false;
     document.getElementById('favor-submitted-msg').classList.add('hidden');
     setPhaseBar('Choose your God Favor level (or skip). Both choices reveal simultaneously.');
+
+    // Always rebuild the panel to ensure it reflects current tokens etc.
+    // Preserve the player's existing selection across rebuilds.
+    const prev = selectedActivation;
+    buildFavorActivation(myP);
+    if(prev !== 'skip') selectActivation(prev);
   } else {
     document.getElementById('btn-submit-favor').disabled = true;
     document.getElementById('favor-submitted-msg').classList.remove('hidden');
@@ -1762,8 +1947,15 @@ function displayFavorPhase(state) {
 }
 
 function buildFavorActivation(myP) {
-  const f = FAVORS[myP.godFavor];
   const content = document.getElementById('favor-activate-content');
+  if(!content) return;
+
+  if(!myP || !myP.godFavor || !FAVORS[myP.godFavor]) {
+    content.innerHTML = `<p style="color:var(--textdim);font-style:italic;padding:8px 0;">Awaiting god favor data...</p>`;
+    return;
+  }
+
+  const f = FAVORS[myP.godFavor];
   const toks = myP.tokens;
 
   let html = `<div class="favor-activate-panel">
@@ -1801,10 +1993,19 @@ function selectActivation(choice) {
 
 async function submitFavor() {
   if(favorLockedLocally) return;
-  favorLockedLocally = true;
 
   const state = await loadState();
-  if(!state || state.phase!=='favor_phase') return;
+  if(!state) return;
+
+  // If somehow we're not in favor_phase, force a display refresh and bail
+  if(state.phase !== 'favor_phase') {
+    updateGameDisplay(state);
+    return;
+  }
+
+  favorLockedLocally = true;
+  document.getElementById('btn-submit-favor').disabled = true;
+  document.getElementById('favor-submitted-msg').classList.remove('hidden');
 
   state[me()].favorChoice = selectedActivation;
 
@@ -1815,16 +2016,16 @@ async function submitFavor() {
     if(state.phase !== 'game_over') state.phase = 'resolution';
   }
   await saveState(state);
+  lastState = state;
 
-  if(state.phase === 'game_over') { updateGameDisplay(state); showGameOver(state); return; }
+  updateGameDisplay(state);  // always refresh
 
-  // Bot game: trigger bot favor if not yet chosen
-  if(isBotGame && state.p2.favorChoice===null) {
+  if(state.phase === 'game_over') { showGameOver(state); return; }
+
+  // Bot game: trigger bot favor if it hasn't chosen yet
+  if(isBotGame && state.p2.favorChoice === null) {
     botTakeTurn('favor');
   }
-
-  document.getElementById('btn-submit-favor').disabled = true;
-  document.getElementById('favor-submitted-msg').classList.remove('hidden');
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1976,6 +2177,7 @@ function resolveRound(state) {
    RESOLUTION DISPLAY
 ═══════════════════════════════════════════════════════════════ */
 function displayResolution(state) {
+  hide('div-coin-flip');
   hide('div-rolling');
   hide('div-favor');
   hide('div-opp-dice');
@@ -2038,31 +2240,35 @@ async function nextRound() {
   const state = await loadState();
   if(!state || state.phase!=='resolution') return;
   state.round++;
-  state.phase = 'rolling';
   state.favorResolved = false;
-  rollForBoth(state);
-  rlog(state, `— Round ${state.round} begins! —`);
-  await saveState(state);
 
-  // Reset local flags
-  localDice = [];
-  localKept = [false,false,false,false,false,false];
-  localRerolls = 0;
-  diceLockedLocally = false;
-  favorLockedLocally = false;
-  selectedActivation = 'skip';
-  favorPanelBuilt = false;
+  if(isBotGame) {
+    // Bot game: auto-flip coin and go straight to rolling
+    state.coinWinner = Math.random() < 0.5 ? 'p1' : 'p2';
+    state.rollingTurn = state.coinWinner;
+    state.phase = 'rolling';
+    initRollingRound(state);
+    const coinWinnerName = state[state.coinWinner].name;
+    rlog(state, `— Round ${state.round} begins! ${coinWinnerName} won the coin toss. —`);
+    await saveState(state);
 
-  // Sync local dice from state
-  localDice = [...state[me()].dice];
-  localKept = [...state[me()].kept];
-  localRerolls = 0;
+    resetRoundLocalState(state);
+    lastState = state;
+    showScreen('game');
+    updateGameDisplay(state);
+    if(state.rollingTurn === 'p2') botTakeTurn('rolling');
+  } else {
+    // Multiplayer: go to coin flip phase
+    state.phase = 'coin_flip';
+    state.coinWinner = null;
+    rlog(state, `— Round ${state.round} begins! The Norns cast their coin! —`);
+    await saveState(state);
 
-  showScreen('game');
-  updateGameDisplay(state);
-
-  // Bot game: trigger bot for new round
-  if(isBotGame) botTakeTurn('rolling');
+    resetRoundLocalState(null);
+    lastState = state;
+    showScreen('game');
+    updateGameDisplay(state);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2113,6 +2319,7 @@ function toggleKey() {
 }
 
 // Init: hide game-only divs
+hide('div-coin-flip');
 hide('div-rolling');
 hide('div-opp-dice');
 hide('div-my-dice-static');
