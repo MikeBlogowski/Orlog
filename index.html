@@ -935,6 +935,9 @@ body > * { position: relative; z-index: 1; }
       <div class="info-box text-center">
         Create a game and share the room code with your opponent to battle across any distance.
       </div>
+      <div id="firebase-notice" class="info-box" style="border-color:var(--redb);color:var(--redb);display:none;margin-top:8px;font-size:0.88rem;">
+        ⚠ Multiplayer not configured. Open the HTML file and set <code style="font-family:monospace;background:rgba(255,255,255,0.05);padding:1px 4px;border-radius:3px;">FIREBASE_URL</code> to your Firebase database URL. Bot vs Player still works without this.
+      </div>
     </div>
   </div>
 
@@ -1211,20 +1214,34 @@ function me()  { return myRole; }
 function opp() { return myRole==='p1'?'p2':'p1'; }
 
 /* ═══════════════════════════════════════════════════════════════
-   STORAGE  (overridden to local object for bot games)
+   STORAGE  (Firebase REST for multiplayer; local object for bot)
+   ─────────────────────────────────────────────────────────────
+   To enable multiplayer on your hosted site:
+   1. Go to https://console.firebase.google.com
+   2. Create a project → Realtime Database → Start in TEST MODE
+   3. Copy your database URL (looks like https://YOUR-PROJECT-default-rtdb.firebaseio.com)
+   4. Paste it below as FIREBASE_URL
 ═══════════════════════════════════════════════════════════════ */
+const FIREBASE_URL = 'https://orlog-e5a09-default-rtdb.europe-west1.firebasedatabase.app/';
+
 async function loadState() {
   if(isBotGame) return botState ? JSON.parse(JSON.stringify(botState)) : null;
   try {
-    const r = await window.storage.get('orlog:'+roomCode, true);
-    if (r) return JSON.parse(r.value);
-  } catch(e) {}
-  return null;
+    const r = await fetch(`${FIREBASE_URL}/orlog/${roomCode}.json`);
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) { console.warn('Load failed', e); return null; }
 }
+
 async function saveState(state) {
   if(isBotGame) { botState = JSON.parse(JSON.stringify(state)); return; }
-  try { await window.storage.set('orlog:'+roomCode, JSON.stringify(state), true); }
-  catch(e) { console.warn('Save failed', e); }
+  try {
+    await fetch(`${FIREBASE_URL}/orlog/${roomCode}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+  } catch(e) { console.warn('Save failed', e); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2325,6 +2342,11 @@ hide('div-opp-dice');
 hide('div-my-dice-static');
 hide('div-favor');
 hide('div-resolution');
+
+// Show Firebase setup notice if not configured
+if(FIREBASE_URL === 'https://YOUR-PROJECT-default-rtdb.firebaseio.com') {
+  document.getElementById('firebase-notice').style.display = '';
+}
 
 // Enter keypress helpers
 document.getElementById('join-code').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
