@@ -1204,11 +1204,12 @@ let botState     = null;  // local copy of game state for bot games
 
 // Local dice state for interactive rolling on your turn
 let localKept  = [false,false,false,false,false,false];
-let myTurnStarted    = false;  // have we synced localKept from state this turn?
-let passedTurnLocally= false;  // have we passed our turn yet this round?
-let favorLockedLocally = false; // have we submitted our favor choice this round?
-let selectedFavor    = null;   // for favor select screen
-let selectedActivation = 'skip'; // for in-game favor phase
+let myTurnStarted    = false;
+let passedTurnLocally= false;
+let favorLockedLocally = false;
+let selectedFavor    = null;
+let selectedActivation = 'skip';
+let lastSeenRound = 1;  // tracks round number to detect new rounds in multiplayer
 
 function me()  { return myRole; }
 function opp() { return myRole==='p1'?'p2':'p1'; }
@@ -1222,7 +1223,7 @@ function opp() { return myRole==='p1'?'p2':'p1'; }
    3. Copy your database URL (looks like https://YOUR-PROJECT-default-rtdb.firebaseio.com)
    4. Paste it below as FIREBASE_URL
 ═══════════════════════════════════════════════════════════════ */
-const FIREBASE_URL = 'https://orlog-e5a09-default-rtdb.europe-west1.firebasedatabase.app/';
+const FIREBASE_URL = 'https://YOUR-PROJECT-default-rtdb.firebaseio.com';
 
 async function loadState() {
   if(isBotGame) return botState ? JSON.parse(JSON.stringify(botState)) : null;
@@ -1576,6 +1577,12 @@ async function pollUpdate() {
   lastState = state;
   const curScreen = document.querySelector('.screen.active')?.id;
 
+  // If the round number has advanced, reset all local per-round flags for both players
+  if(state.round > lastSeenRound && curScreen === 'screen-game') {
+    lastSeenRound = state.round;
+    resetRoundLocalState(state);
+  }
+
   // Bot game: just update display from local state
   if(isBotGame) {
     if(state.phase==='game_over') { showGameOver(state); clearInterval(pollTimer); return; }
@@ -1596,8 +1603,8 @@ async function pollUpdate() {
   // Favor select → coin flip / game
   if((state.phase==='coin_flip' || state.phase==='rolling') && curScreen==='screen-favor') {
     showScreen('game');
+    lastSeenRound = state.round;
     resetRoundLocalState(state);
-    favorPanelBuilt = false;
   }
 
   // Coin flip: p2 may need to show the coin flip UI; p1 will do the flip
@@ -2258,6 +2265,7 @@ async function nextRound() {
   if(!state || state.phase!=='resolution') return;
   state.round++;
   state.favorResolved = false;
+  lastSeenRound = state.round;  // prevent pollUpdate from double-resetting for the player who clicked
 
   if(isBotGame) {
     // Bot game: auto-flip coin and go straight to rolling
